@@ -49,6 +49,10 @@ class SignalCLIDBusMock(object):
                 <arg type="as" direction="in" name="attachmentfiles" />
                 <arg type="ay" direction="in" name="group_id" />
             </method>
+            <method name="getGroupName">
+                <arg type="ay" direction="in" name="group_id" />
+                <arg type="s" direction="out" />
+            </method>
             <signal name="MessageReceived">
                 <arg type="x" direction="out" />
                 <arg type="s" direction="out" />
@@ -62,6 +66,7 @@ class SignalCLIDBusMock(object):
 
     def __init__(self):
         self._incoming = []
+        self._groups = {(0, 1, 2): 'test group'}
 
     def sendMessage(self, message, attachmentfiles, recipient):
         self._incoming.append([time.time(),
@@ -70,5 +75,8 @@ class SignalCLIDBusMock(object):
     def sendGroupMessage(self, message, attachmentfiles, group_id):
         self._incoming.append([time.time(),
                                message, attachmentfiles, group_id])
+
+    def getGroupName(self, group_id):
+        return self._groups.get(tuple(group_id), '')
 
     MessageReceived = signal()
