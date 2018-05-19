@@ -42,7 +42,7 @@ class SignalCLIDBusMock(object):
             <method name="sendMessage">
                 <arg type="s" direction="in" name="message" />
                 <arg type="as" direction="in" name="attachmentfiles" />
-                <arg type="s" direction="in" name="recipient" />
+                <arg type="as" direction="in" name="recipients" />
             </method>
             <method name="sendGroupMessage">
                 <arg type="s" direction="in" name="message" />
@@ -68,9 +68,12 @@ class SignalCLIDBusMock(object):
         self._incoming = []
         self._groups = {(0, 1, 2): 'test group'}
 
-    def sendMessage(self, message, attachmentfiles, recipient):
+    def sendMessage(self, message, attachmentfiles, recipients):
+        if len(recipients) > 1 and all([len(k) == 1 for k in recipients]):
+            raise TypeError('conform with signal-cli 0.6.0 and wrap single '
+                            'recipient into list like so [\'+123\']')
         self._incoming.append([time.time(),
-                               message, attachmentfiles, recipient])
+                               message, attachmentfiles, recipients])
 
     def sendGroupMessage(self, message, attachmentfiles, group_id):
         self._incoming.append([time.time(),
