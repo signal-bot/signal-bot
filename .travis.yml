@@ -10,4 +10,4 @@ install:
   - pip install -r requirements-test.txt
 script:
   - flake8
-  - nosetests --nologcapture
+  - nosetests signalbot --nologcapture
