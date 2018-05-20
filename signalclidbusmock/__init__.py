@@ -16,17 +16,17 @@ class Mocker(object):
         self._loop = GLib.MainLoop()
         self._thread = Thread(target=self._loop.run, daemon=True)
         self._thread.start()
-        self.outgoing = []
+        self.tosignalbot = []
 
     def messageSignalbot(self, sender, group_id, message, attachmentfiles):
         self._mock.MessageReceived(int(time.time()),
                                    sender, group_id, message, attachmentfiles)
-        self.outgoing.append([int(time.time()),
-                              sender, group_id, message, attachmentfiles])
+        self.tosignalbot.append([int(time.time()),
+                                 sender, group_id, message, attachmentfiles])
 
     @property
-    def incoming(self):
-        return self._mock._incoming
+    def fromsignalbot(self):
+        return self._mock._sentmessages
 
     def close(self):
         self._loop.quit()
@@ -64,19 +64,19 @@ class SignalCLIDBusMock(object):
     """
 
     def __init__(self):
-        self._incoming = []
+        self._sentmessages = []
         self._groups = {(0, 1, 2): 'test group'}
 
     def sendMessage(self, message, attachmentfiles, recipients):
         if len(recipients) > 1 and all([len(k) == 1 for k in recipients]):
             raise TypeError('conform with signal-cli 0.6.0 and wrap single '
                             'recipient into list like so [\'+123\']')
-        self._incoming.append([time.time(),
-                               message, attachmentfiles, recipients])
+        self._sentmessages.append([time.time(),
+                                   message, attachmentfiles, recipients])
 
     def sendGroupMessage(self, message, attachmentfiles, group_id):
-        self._incoming.append([time.time(),
-                               message, attachmentfiles, group_id])
+        self._sentmessages.append([time.time(),
+                                   message, attachmentfiles, group_id])
 
     def getGroupName(self, group_id):
         return self._groups.get(tuple(group_id), '')
