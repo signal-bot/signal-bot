@@ -24,36 +24,39 @@ The idea behind `Mocker` is to enable for testing and debugging of signal-bot an
 It offers a dbus service that (partially) mimicks the dbus service of signal-cli (if needed, it should eventually mimick the [signal-cli dbus service interface][signal-dbus] exactly).
 
 ```python
+from pydbus import SessionBus
 from signalclidbusmock import Mocker
+from threading import Thread
+import time
 
-# start dummy service
+# start dummy dbus service
 mocker = Mocker()
 
-# signal-bot should connect once the sigal-cli (or the mocker) service is up
-# for the purpose of this example a minimalisic signal-bot as shown below can
-# be started now
+
+# a minimalistic signal-bot
+def message(t, s, g, m, a):
+    t = Thread(target=signal.sendMessage,
+               args=['Hello {}, this is Signalbot :-)'.format(s), None, [s]],
+               daemon=True)
+    t.start()
+
+
+bus = SessionBus()
+signal = bus.get('org.signalbot.signalclidbusmock')
+signal.onMessageReceived = message
 
 # simulate sending messages to signal-bot
 mocker.messageSignalbot('+123', None, 'Hi signal-bot!', [])
 mocker.messageSignalbot('+000', None, 'Who are you?', [])
+
+# wait for signal-bot to respond
+time.sleep(1)
 
 # the messages we sent to signal-bot
 print(mocker.tosignalbot)
 
 # the messages signal-bot sent in response
 print(mocker.fromsignalbot)
-```
-
-```python
-from gi.repository import GLib
-from pydbus import SessionBus
-
-# a minimalistic signal-bot
-bus = SessionBus()
-signal = bus.get('org.signalbot.signalclidbusmock')
-signal.onMessageReceived = lambda t, s, g, m, a: signal.sendMessage(
-    'Hello {}, this is Signalbot :-)'.format(s), None, [s])
-GLib.MainLoop().run()
 ```
 
 
