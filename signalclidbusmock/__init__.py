@@ -14,8 +14,7 @@ class Mocker(object):
             "org.signalbot.signalclidbusmock",
             self._mock)
         self._loop = GLib.MainLoop()
-        self._thread = Thread(target=self._loop.run)
-        self._thread.daemon = True
+        self._thread = Thread(target=self._loop.run, daemon=True)
         self._thread.start()
         self.outgoing = []
 
