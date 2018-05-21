@@ -1,13 +1,31 @@
 dist: trusty
+sudo: required
 
 language: python
-python:
-  - 2.7
-  - 3.4
-  - 3.5
-  - 3.6
+
+services: docker
+
+before_install:
+  - docker run -d --name ubuntu -v $(pwd):/travis ubuntu:latest tail -f /dev/null
+  - docker ps
+
 install:
-  - pip install -r requirements-test.txt
+  - docker exec -t ubuntu bash -c "apt-get update;
+    apt-get install -y dbus-x11 python3 python3-gi python3-pip;
+    /usr/bin/python3 -V;
+    /usr/bin/pip3 install -r /travis/requirements.txt;
+    /usr/bin/pip3 install -r /travis/requirements-test.txt;
+    /usr/bin/dbus-launch --sh-syntax > dbus;"
+
 script:
-  - flake8
-  - nosetests signalbot --nologcapture
+  - docker exec -t ubuntu bash -c "cd /travis;
+    ls -al;
+    /usr/bin/python3 -V;"
+  - docker exec -t ubuntu bash -c "cd /travis;
+    flake8;"
+  - docker exec -t ubuntu bash -c "cd /travis;
+    . ../dbus;
+    nosetests -v --nocapture --nologcapture;"
+
+notifications:
+  email: false
