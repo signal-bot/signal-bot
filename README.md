@@ -17,7 +17,7 @@ This project is in its infancy!
 * finish mocker to support "message protocol" testing, i.e. testing whether certain messages are responded to as expected by signalbot; also allow for easy definition of such test cases/conversations
 * lay out the core signal-bot message triager and the plugin interface
 * setup.py that also deals with python-gi, which is not smoothly installable via pip; for travis one way may be to symlink the dist-packages
-* currently we test python 2.7 and 3.4; if we feel the urge we can make travis testing with python 3.5 and 3.6 work (glib needs to be compiled)
+* currently we test python 3.6; if we feel the urge we can test more
 
 ## Mocker (work in progress)
 
