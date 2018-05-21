@@ -9,7 +9,7 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
   - # hack to make gi available
-  - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" >> /etc/apt/sources.list
+  - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
   - sudo apt-get update
   - sudo apt-get --reinstall install libglib2.0-0 python-gi python3-gi
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
