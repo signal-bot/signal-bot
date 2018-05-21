@@ -9,15 +9,15 @@ before_install:
   - docker run -d --name ubuntu -v $(pwd):/travis ubuntu:latest tail -f /dev/null
   - docker ps
 
-intall:
+install:
   - docker exec -t ubuntu bash -c "python -V;
     pip install -r requirements.txt;
     pip install -r requirements-test.txt;
     dbus-launch --sh-syntax > dummy;
-    . dummy
-    rm dummy"
+    . dummy;
+    rm dummy;"
 
 script:
   - docker exec -t ubuntu bash -c "
-    flake8
-    nosetests --nologcapture"
+    flake8;
+    nosetests --nologcapture;"
