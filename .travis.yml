@@ -4,7 +4,7 @@ language: python
 sudo: required
 python:
   - 2.7
-  - 3.4
+  - 3.5
 install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
@@ -17,8 +17,8 @@ install:
   - ln -s `cat dummy` gi
   - rm dummy
   - ls gi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython*.so gi/_gi.cpython-34m.so; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.cpython*.so gi/_gi.so; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]; then sudo cp gi/_gi.*.so gi/_gi.cpython-35m.so; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.*.so gi/_gi.so; fi
   - ls gi
   - # launch dbus and export dbus env variables
   - dbus-launch --sh-syntax > dummy
