@@ -5,8 +5,6 @@ sudo: required
 python:
   - 2.7
   - 3.4
-  - 3.5
-  - 3.6
 install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
@@ -18,8 +16,6 @@ install:
   - ln -s `cat dummy` gi
   - rm dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-34m.so; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-35m.so; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-36m.so; fi
 script:
   - flake8
   - nosetests --nologcapture
