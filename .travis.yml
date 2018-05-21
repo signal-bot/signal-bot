@@ -9,8 +9,8 @@ install:
   - # hack to make gi available
   - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
   - sudo apt-get update
-  - sudo apt-get --reinstall install libsnapd-glib1 libsnapd-glib-dev glib-networking-services python-gi python3-gi
-  - sudo apt-get --reinstall install libsnapd-glib1 libsnapd-glib-dev glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
   - sudo apt-cache search glib
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
@@ -30,4 +30,10 @@ install:
   - rm dummy
 script:
   - flake8
+  - nosetests --nologcapture
+  - deactivate
+  - pip install -r requirements.txt
+  - pip install -r requirements-test.txt
+  - python3 -c "from gi.repository import Gio; print(Gio)"
+  - python -c "from gi.repository import Gio; print(Gio)"
   - nosetests --nologcapture
