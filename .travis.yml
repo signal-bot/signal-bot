@@ -10,7 +10,8 @@ before_install:
   - docker ps
 
 install:
-  - docker exec -t ubuntu bash -c "python -V;
+  - docker exec -t ubuntu bash -c "apt-get update;
+    apt-get install python3 python3-gi python-pip-whl dbus;
     pip install -r requirements.txt;
     pip install -r requirements-test.txt;
     dbus-launch --sh-syntax > dummy;
@@ -18,6 +19,10 @@ install:
     rm dummy;"
 
 script:
-  - docker exec -t ubuntu bash -c "
+  - docker exec -t ubuntu bash -c "cd /travis;
+    python -V;
     flake8;
     nosetests --nologcapture;"
+
+notifications:
+  email: false
