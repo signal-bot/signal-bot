@@ -16,6 +16,8 @@ install:
   - ln -s `cat dummy` gi
   - rm dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-34m.so; fi
+  - dbus-launch --sh-syntax > dummy
+  - . dummy
 script:
   - flake8
   - nosetests --nologcapture
