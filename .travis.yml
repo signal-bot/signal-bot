@@ -17,4 +17,9 @@ script:
   - ls /usr/local/lib/
   - ls /usr/lib/
   - flake8
+  - /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-2]))"
+  - /usr/bin/python2 -c "import gi; print('/'.join(gi.__file__.split('/')[:-2]))"
   - nosetests signalbot --nologcapture
+  - deactivate
+  - python -c 'import gi; print(gi.__file__)'
+  - python3 -c 'import gi; print(gi.__file__)'
