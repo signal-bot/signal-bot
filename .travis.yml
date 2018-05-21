@@ -10,7 +10,8 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
   - # hack to make gi available
-  - sudo apt-get install python-gi python3-gi
+  - sudo apt-get update
+  - sudo apt-get reinstall python-gi python3-gi
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
@@ -20,4 +21,4 @@ script:
   - flake8
   - nosetests --nologcapture
   - deactivate
-  - python3 -c "import gi; print(gi._gi.__file__)"
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then python3 -c "import gi; print(gi._gi.__file__)"; fi
