@@ -9,8 +9,8 @@ install:
   - # hack to make gi available
   - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
   - sudo apt-get update
-  - sudo apt-get --reinstall install python-gobject libmbim-glib4 libglibmm-2.4-1v5 glib-networking-services python-gi python3-gi
-  - sudo apt-get --reinstall install python-gobject libmbim-glib4 libglibmm-2.4-1v5 glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install libsnapd-glib1 libsnapd-glib-dev glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install libsnapd-glib1 libsnapd-glib-dev glib-networking-services python-gi python3-gi
   - sudo apt-cache search glib
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
@@ -20,6 +20,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]; then sudo cp gi/_gi.*.so gi/_gi.cpython-35m.so; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.*.so gi/_gi.so; fi
   - ls gi
+  - pip install vext vext.gi
   - # install pip requirements
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
