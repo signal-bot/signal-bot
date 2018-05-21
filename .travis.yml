@@ -15,9 +15,7 @@ install:
     /usr/bin/python3 -V;
     /usr/bin/pip3 install -r /travis/requirements.txt;
     /usr/bin/pip3 install -r /travis/requirements-test.txt;
-    /usr/bin/dbus-launch --sh-syntax > dummy;
-    . dummy;
-    rm dummy;"
+    /usr/bin/dbus-launch --sh-syntax > dbus;"
 
 script:
   - docker exec -t ubuntu bash -c "cd /travis;
@@ -26,6 +24,7 @@ script:
   - docker exec -t ubuntu bash -c "cd /travis;
     flake8;"
   - docker exec -t ubuntu bash -c "cd /travis;
+    . ../dbus;
     nosetests -v --nocapture --nologcapture;"
 
 notifications:
