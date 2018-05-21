@@ -7,10 +7,10 @@ import time
 
 class Mocker(object):
 
-    def __init__(self):
+    def start(self):
         self._bus = SessionBus()
         self._mock = SignalCLIDBusMock()
-        self._service = self._bus.publish(
+        self._mockerservice = self._bus.publish(
             "org.signalbot.signalclidbusmock",
             self._mock)
         self._loop = GLib.MainLoop()
@@ -28,7 +28,7 @@ class Mocker(object):
     def fromsignalbot(self):
         return self._mock._sentmessages
 
-    def close(self):
+    def stop(self):
         self._loop.quit()
         self._thread.join()
-        self._service.unpublish()
+        self._mockerservice.unpublish()

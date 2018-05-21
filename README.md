@@ -31,13 +31,14 @@ import time
 
 # start dummy dbus service
 mocker = Mocker()
+mocker.start()
 
 
 # a minimalistic signal-bot
 def message(t, s, g, m, a):
-    t = Thread(target=signal.sendMessage,
-               args=['Hello {}, this is Signalbot :-)'.format(s), None, [s]],
-               daemon=True)
+    t = Thread(args=['Hello {}, this is Signalbot :-)'.format(s), None, [s]],
+               daemon=True,
+               target=signal.sendMessage)
     t.start()
 
 
