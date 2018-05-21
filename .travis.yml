@@ -7,6 +7,7 @@ python:
   - 3.5
   - 3.6
 install:
+  - sudo apt-get install python-gi python3-gi
   - pip install -r requirements-test.txt
 script:
   - flake8
