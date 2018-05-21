@@ -9,8 +9,8 @@ install:
   - # hack to make gi available
   - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
   - sudo apt-get update
-  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
-  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi python-dbus python3-dbus
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi python-dbus python3-dbus
   - sudo apt-cache search glib
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
@@ -20,7 +20,6 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]; then sudo cp gi/_gi.*.so gi/_gi.cpython-35m.so; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.*.so gi/_gi.so; fi
   - ls gi
-  - pip install vext vext.gi
   - # install pip requirements
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
@@ -31,9 +30,7 @@ install:
 script:
   - flake8
   - nosetests --nologcapture
-  - deactivate
-  - pip install -r requirements.txt
-  - pip install -r requirements-test.txt
   - python3 -c "from gi.repository import Gio; print(Gio)"
   - python -c "from gi.repository import Gio; print(Gio)"
-  - nosetests --nologcapture
+  - python3 -c "from pydbus import SessionBus; bus = SessionBus(); bus.register_object('/asdf/asdf', 'asdf.asdf.asdf', '<node></node>')"
+  - python -c "from pydbus import SessionBus; bus = SessionBus(); bus.register_object('/asdf/asdf', 'asdf.asdf.asdf', '<node></node>')"
