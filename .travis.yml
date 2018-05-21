@@ -9,15 +9,18 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
   - # hack to make gi available
+  - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" >> /etc/apt/sources.list
   - sudo apt-get update
-  - sudo apt-get --reinstall install python-gi python3-gi
+  - sudo apt-get --reinstall install libglib2.0-0 python-gi python3-gi
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
   - rm dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-34m.so; fi
+  - # launch dbus and export dbus env variables
   - dbus-launch --sh-syntax > dummy
   - . dummy
+  - rm dummy
 script:
   - flake8
   - nosetests --nologcapture
