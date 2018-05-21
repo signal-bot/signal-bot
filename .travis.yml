@@ -16,7 +16,10 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
   - rm dummy
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython-34m-x86_64-linux-gnu.so gi/_gi.cpython-34m.so; fi
+  - ls gi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.4* ]]; then sudo cp gi/_gi.cpython*.so gi/_gi.cpython-34m.so; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.cpython*.so gi/_gi.so; fi
+  - ls gi
   - # launch dbus and export dbus env variables
   - dbus-launch --sh-syntax > dummy
   - . dummy
