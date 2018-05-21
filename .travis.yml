@@ -7,13 +7,17 @@ python:
   - 3.5
   - 3.6
 install:
-  - sudo apt-get install python-gi python3-gi
+  - pip install -r requirements.txt
   - pip install -r requirements-test.txt
   - # hack to make gi available
+  - sudo apt-get install python-gi python3-gi
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
   - rm dummy
+  - ls gi
 script:
   - flake8
-  - nosetests signalbot --nologcapture
+  - nosetests --nologcapture
+  - deactivate
+  - python3 -c "import gi; print(gi._gi.__file__)"
