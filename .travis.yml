@@ -9,17 +9,11 @@ python:
 install:
   - sudo apt-get install python-gi python3-gi
   - pip install -r requirements-test.txt
+  - # hack to make gi available
+  - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
+  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
+  - ln -s `cat dummy` gi
+  - rm dummy
 script:
-  - python -m site
-  - export PYTHONPATH=$PYTHONPATH:"/usr/local/lib/python$TRAVIS_PYTHON_VERSION/dist-packages"
-  - echo $PYTHONPATH
-  - python -m site
-  - ls /usr/local/lib/
-  - ls /usr/lib/
   - flake8
-  - /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-2]))"
-  - /usr/bin/python2 -c "import gi; print('/'.join(gi.__file__.split('/')[:-2]))"
   - nosetests signalbot --nologcapture
-  - deactivate
-  - python -c 'import gi; print(gi.__file__)'
-  - python3 -c 'import gi; print(gi.__file__)'
