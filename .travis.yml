@@ -10,10 +10,11 @@ install:
   - sudo apt-get install python-gi python3-gi
   - pip install -r requirements-test.txt
 script:
+  - python -m site
+  - export PYTHONPATH=$PYTHONPATH:"/usr/local/lib/python$TRAVIS_PYTHON_VERSION/dist-packages"
   - echo $PYTHONPATH
   - python -m site
-  - deactivate
-  - echo $PYTHONPATH
-  - python -m site
+  - ls /usr/local/lib/
+  - ls /usr/lib/
   - flake8
   - nosetests signalbot --nologcapture
