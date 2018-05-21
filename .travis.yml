@@ -1,6 +1,7 @@
 dist: trusty
 
 language: python
+sudo: required
 python:
   - 2.7
   - 3.4
@@ -16,8 +17,10 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
   - rm dummy
+  - sudo ln -s gi/_gi.*.so gi/_gi.so
   - ls gi
 script:
+  - python3 -v -c 'import gi._gi'
   - flake8
   - nosetests --nologcapture
   - deactivate
