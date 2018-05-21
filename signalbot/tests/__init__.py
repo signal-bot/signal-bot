@@ -15,5 +15,6 @@ class HelloWorldTest(unittest.TestCase):
     def test(self):
         self.mocker.messageSignalbot('World', None, 'Hi Signalbot!', [])
         time.sleep(.1)
+        print(self.mocker.fromsignalbot[0][1])
         self.assertCountEqual(self.mocker.fromsignalbot[0][1:],
                               ['Hello World!', [], ['World']])

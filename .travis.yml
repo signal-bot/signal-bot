@@ -13,7 +13,6 @@ install:
   - docker exec -t ubuntu bash -c "apt-get update;
     apt-get install -y dbus-x11 python3 python3-gi python3-pip;
     /usr/bin/python3 -V;
-    /urs/bin/easy_install pip;
     /usr/bin/pip3 install -r /travis/requirements.txt;
     /usr/bin/pip3 install -r /travis/requirements-test.txt;
     /usr/bin/dbus-launch --sh-syntax > dummy;
@@ -27,7 +26,7 @@ script:
   - docker exec -t ubuntu bash -c "cd /travis;
     flake8;"
   - docker exec -t ubuntu bash -c "cd /travis;
-    nosetests --nologcapture;"
+    nosetests -v --nocapture --nologcapture;"
 
 notifications:
   email: false
