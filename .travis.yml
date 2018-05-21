@@ -11,8 +11,8 @@ install:
   - # hack to make gi available
   - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
   - sudo apt-get update
-  - sudo apt-get --reinstall install libglib2.0-0 python-gi python3-gi
-  - sudo apt-get --reinstall install libglib2.0-0 python-gi python3-gi
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
+  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi
   - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
   - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
   - ln -s `cat dummy` gi
