@@ -11,14 +11,15 @@ before_install:
 
 install:
   - docker exec -t ubuntu bash -c "apt-get update;
-    apt-get install -y python3 python3-gi python3-setuptools;
+    apt-get install -y python3 python3-gi python3-setuptools dbus;
     /usr/bin/python3 -V;
-    /urs/bin/easy_install3 pip;
-    pip install -r requirements.txt;
-    pip install -r requirements-test.txt;
+    /urs/bin/easy_install pip;
+    /usr/bin/pip install -r requirements.txt;
+    /usr/bin/pip install -r requirements-test.txt;
     /usr/bin/dbus-launch --sh-syntax > dummy;
     . dummy;
-    rm dummy;"
+    rm dummy;
+    ls /usr/bin/;"
 
 script:
   - docker exec -t ubuntu bash -c "cd /travis;
