@@ -1,36 +1,23 @@
 dist: trusty
+sudo: required
 
 language: python
-sudo: required
-python:
-  - 2.7
-  - 3.5
-install:
-  - # hack to make gi available
-  - echo "deb http://de.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse" | sudo tee --append /etc/apt/sources.list
-  - sudo apt-get update
-  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi python-dbus python3-dbus
-  - sudo apt-get --reinstall install glib-networking-services python-gi python3-gi python-dbus python3-dbus
-  - sudo apt-cache search glib
-  - /usr/bin/python3 -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy
-  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then /usr/bin/python -c "import gi; print('/'.join(gi.__file__.split('/')[:-1]))" > dummy; fi
-  - ln -s `cat dummy` gi
-  - rm dummy
-  - ls gi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]; then sudo cp gi/_gi.*.so gi/_gi.cpython-35m.so; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 2* ]]; then sudo cp gi/_gi.*.so gi/_gi.so; fi
-  - ls gi
-  - # install pip requirements
-  - pip install -r requirements.txt
-  - pip install -r requirements-test.txt
-  - # launch dbus and export dbus env variables
-  - dbus-launch --sh-syntax > dummy
-  - . dummy
-  - rm dummy
+
+services: docker
+
+before_install:
+  - docker run -d --name ubuntu -v $(pwd):/travis ubuntu:latest tail -f /dev/null
+  - docker ps
+
+intall:
+  - docker exec -t ubuntu bash -c "python -V;
+    pip install -r requirements.txt;
+    pip install -r requirements-test.txt;
+    dbus-launch --sh-syntax > dummy;
+    . dummy
+    rm dummy"
+
 script:
-  - flake8
-  - nosetests --nologcapture
-  - python3 -c "from gi.repository import Gio; print(Gio)"
-  - python -c "from gi.repository import Gio; print(Gio)"
-  - python3 -c "from pydbus import SessionBus; bus = SessionBus(); bus.register_object('/asdf/asdf', 'asdf.asdf.asdf', '<node></node>')"
-  - python -c "from pydbus import SessionBus; bus = SessionBus(); bus.register_object('/asdf/asdf', 'asdf.asdf.asdf', '<node></node>')"
+  - docker exec -t ubuntu bash -c "
+    flake8
+    nosetests --nologcapture"
