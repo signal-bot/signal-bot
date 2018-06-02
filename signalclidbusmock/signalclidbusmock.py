@@ -28,7 +28,7 @@ class SignalCLIDBusMock(object):
                 <arg type="as" direction="out" />
             </signal>
         </interface>
-        </node>
+    </node>
     """
 
     def __init__(self):
