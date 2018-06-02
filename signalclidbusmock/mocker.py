@@ -18,11 +18,11 @@ class Mocker(object):
         self._thread.start()
         self.tosignalbot = []
 
-    def messageSignalbot(self, sender, group_id, message, attachmentfiles):
+    def messageSignalbot(self, sender, group_id, text, attachmentfiles):
         self._mock.MessageReceived(int(time.time()),
-                                   sender, group_id, message, attachmentfiles)
+                                   sender, group_id, text, attachmentfiles)
         self.tosignalbot.append([int(time.time()),
-                                 sender, group_id, message, attachmentfiles])
+                                 sender, group_id, text, attachmentfiles])
 
     @property
     def fromsignalbot(self):
