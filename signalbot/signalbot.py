@@ -103,7 +103,19 @@ class Signalbot(object):
         message = Message(self,
                           timestamp, sender, group_id, text, attachmentfiles)
 
-        self._triagemessage(message)
+        # Master messages are handled internally and in main thread
+        if message.text.startswith('/'):
+            self._master_message(message)
+            return
+
+        # Other messages are handled by plugins and in separate thread
+        chat_id = message.get_chat_id()
+        if chat_id not in self.config['enabled']:
+            return
+        for plugin in self.config['enabled'][chat_id]:
+            if plugin not in self._plugins:
+                continue
+            self._plugins[plugin].start_receive(message)
 
     def _master_print_help(self, message):
         message.reply("""
@@ -183,22 +195,6 @@ class Signalbot(object):
             self._master_list_available(message)
         else:
             message.error("Invalid command.")
-
-    def _triagemessage(self, message):
-
-        # Master messages are handled internally
-        if message.text.startswith('/'):
-            self._master_message(message)
-            return
-
-        # Other messages are handled by plugins
-        chat_id = message.get_chat_id()
-        if chat_id not in self.config['enabled']:
-            return
-        for plugin in self.config['enabled'][chat_id]:
-            if plugin not in self._plugins:
-                continue
-            self._plugins[plugin].receive(message)
 
     def stop(self):
         self._loop.quit()
