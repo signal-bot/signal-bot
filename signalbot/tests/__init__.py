@@ -13,7 +13,7 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir = TemporaryDirectory()
 
         config = {
-            'plugins': ['pingpong'],
+            'plugins': ['pingpong', 'pingponglocktest'],
             'master': '+123'}
         configfile = Path.joinpath(Path(self.tempdir.name), 'config.yaml')
         yaml.dump(config, configfile.open('w'))
@@ -31,7 +31,7 @@ class HelloWorldTest(unittest.TestCase):
         self.mocker.stop()
         self.tempdir.cleanup()
 
-    def test(self):
+    def test_master(self):
         self.mocker.messageSignalbot('+000', None, '/enable pingpong', [])
         self.mocker.messageSignalbot('+000', None, 'ping', [])
         self.mocker.messageSignalbot('+123', None, '/enable pingpong', [])
@@ -47,3 +47,42 @@ class HelloWorldTest(unittest.TestCase):
                               ['pong', [], ['+123']])
         self.assertCountEqual(self.mocker.fromsignalbot[3][1:],
                               ['Plugin pingpong disabled. ✔', [], ['+123']])
+
+    def test_locking_basic(self):
+        self.mocker.messageSignalbot('+123', None, '/enable pingponglocktest',
+                                     [])
+        self.mocker.messageSignalbot('+123', None, 'ping', [])
+        self.mocker.messageSignalbot('+123', None, 'backup', [])
+        time.sleep(.1)
+        self.mocker.messageSignalbot('+123', None, 'ping', [])
+        time.sleep(5)
+        expect_messages = [
+            ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
+            ['start pong', [], ['+123']],
+            ['Acquiring lock...', [], ['+123']],
+            ['pong', [], ['+123']],
+            ['Locked - sleeping 2 sec ...', [], ['+123']],
+            ['... done sleeping / locking', [], ['+123']],
+            ['start pong', [], ['+123']],
+            ['pong', [], ['+123']]]
+        self.assertEqual(len(expect_messages), len(self.mocker.fromsignalbot))
+        for want, have in zip(expect_messages, self.mocker.fromsignalbot):
+            self.assertCountEqual(want, have[1:])
+
+    def test_locking_twoblocking(self):
+        self.mocker.messageSignalbot('+123', None, '/enable pingponglocktest',
+                                     [])
+        self.mocker.messageSignalbot('+123', None, 'backup2', [])
+        self.mocker.messageSignalbot('+123', None, 'backup2', [])
+        time.sleep(5)
+        expect_messages = [
+            ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
+            ['Acquiring lock...', [], ['+123']],
+            ['Acquiring lock...', [], ['+123']],
+            ['Locked - sleeping 2 sec ...', [], ['+123']],
+            ['... done sleeping / locking', [], ['+123']],
+            ['Locked - sleeping 2 sec ...', [], ['+123']],
+            ['... done sleeping / locking', [], ['+123']]]
+        self.assertEqual(len(expect_messages), len(self.mocker.fromsignalbot))
+        for want, have in zip(expect_messages, self.mocker.fromsignalbot):
+            self.assertCountEqual(want, have[1:])
