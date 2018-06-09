@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from signalbot import Signalbot
 from argparse import ArgumentParser
+from signalbot import Signalbot
 
 parser = ArgumentParser(description='Signalbot')
 parser.add_argument('--data-dir', help='Data and config directory')

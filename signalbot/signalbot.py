@@ -1,8 +1,8 @@
 from gi.repository import GLib
-from pydbus import SessionBus, SystemBus, connect
-from threading import Thread
-from pathlib import Path
 from importlib import import_module
+from pathlib import Path
+from pydbus import connect, SessionBus, SystemBus
+from threading import Thread
 import yaml
 
 

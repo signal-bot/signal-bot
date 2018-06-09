@@ -1,5 +1,4 @@
-from threading import Condition, Lock
-from threading import Thread
+from threading import Condition, Lock, Thread
 
 
 class ChatThreadcount:
@@ -13,7 +12,6 @@ class ChatThreadcount:
         self._condition = Condition()
 
     def __enter__(self):
-
         # Don't allow starting new blocked threads during entry to the
         # ChatThreadcount lock. This is to prevent a new blocking thread
         # to enter the ChatLock between the
@@ -112,6 +110,7 @@ class ChatLock:
 
 
 class Plugin:
+
     def __init__(self, bot):
         self.bot = bot
 
