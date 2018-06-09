@@ -122,6 +122,8 @@ class Plugin:
         Acquires lock that can be used through `with` to ensure the currently
         running thread is the only running thread. Will block other threads
         from starting and wait for currently running threads to finish.
+        Note that other threads currently waiting to acquire the per-chat lock
+        do not count as running.
         """
         return self._chat_locks[chat_id]
 
