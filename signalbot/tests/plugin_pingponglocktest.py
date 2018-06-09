@@ -1,4 +1,4 @@
-from .plugin import Plugin
+from signalbot.plugins.plugin import Plugin
 
 
 class PingPongLockTest(Plugin):
