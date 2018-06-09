@@ -9,4 +9,4 @@ parser.add_argument('--mocker', action='store_true', default=False)
 args = parser.parse_args()
 
 bot = Signalbot(data_dir=args.data_dir, mocker=args.mocker)
-bot.start_and_wait()
+bot.start_and_join()

@@ -79,7 +79,7 @@ class Signalbot(object):
             self._signal = self._bus.get('org.signalbot.signalclidbusmock')
         else:
             self._signal = self._bus.get('org.asamk.Signal')
-        self._signal.onMessageReceived = self._receivemessage
+        self._signal.onMessageReceived = self._triagemessage
 
         self._plugins = {
             plugin: import_module('.plugins.{}'.format(plugin),
@@ -94,7 +94,7 @@ class Signalbot(object):
         self._thread = Thread(daemon=True, target=self._loop.run)
         self._thread.start()
 
-    def start_and_wait(self):
+    def start_and_join(self):
         self.start()
         self._thread.join()
 
@@ -104,8 +104,8 @@ class Signalbot(object):
     def send_group_message(self, text, attachments, group_id):
         self. _signal.sendGroupMessage(text, attachments, group_id)
 
-    def _receivemessage(self,
-                        timestamp, sender, group_id, text, attachmentfiles):
+    def _triagemessage(self,
+                       timestamp, sender, group_id, text, attachmentfiles):
         message = Message(self,
                           timestamp, sender, group_id, text, attachmentfiles)
 
@@ -121,7 +121,7 @@ class Signalbot(object):
         for plugin in self.config['enabled'][chat_id]:
             if plugin not in self._plugins:
                 continue
-            self._plugins[plugin].start_receive(message)
+            self._plugins[plugin].start_processing(message)
 
     def _master_print_help(self, message):
         message.reply("""

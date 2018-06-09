@@ -3,7 +3,7 @@ from signalbot.plugins.plugin import Plugin
 
 class PingPongLockTest(Plugin):
 
-    def receive(self, message):
+    def triagemessage(self, message):
 
         from time import sleep
 
