@@ -23,9 +23,8 @@ class HelloWorldTest(unittest.TestCase):
         self.mocker = Mocker()
         self.mocker.start()
 
-        runfile = Path.joinpath(Path(__file__).parent, '..', '..', 'run.py')
         self.bot_popen = Popen(
-            [str(runfile), '--data-dir', self.tempdir.name, '--mocker'])
+            ['signal-bot', '--data-dir', self.tempdir.name, '--mocker'])
         time.sleep(.3)
 
     def tearDown(self):
