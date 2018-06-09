@@ -59,6 +59,7 @@ class Signalbot(object):
             'enabled': {},
             'master': None,
             'plugins': [],
+            'testing_plugins': [],
         }
         for key, default in defaults.items():
             self.config[key] = self.config.get(key, default)
@@ -81,9 +82,13 @@ class Signalbot(object):
         self._signal.onMessageReceived = self._receivemessage
 
         self._plugins = {
-            plugin: import_module('.plugins.' + plugin,
+            plugin: import_module('.plugins.{}'.format(plugin),
                                   package='signalbot').__plugin__(self)
             for plugin in self.config['plugins']}
+        self._plugins.update({
+            plugin: import_module('.tests.plugin_{}'.format(plugin),
+                                  package='signalbot').__plugin__(self)
+            for plugin in self.config['testing_plugins']})
 
         self._loop = GLib.MainLoop()
         self._thread = Thread(daemon=True, target=self._loop.run)
@@ -131,7 +136,8 @@ class Signalbot(object):
     def _master_enable(self, message, params):
         for plugin in params:
 
-            if plugin not in self.config['plugins']:
+            if plugin not in self.config['plugins'] + \
+                    self.config['testing_plugins']:
                 message.error("Plugin {} not loaded".format(plugin))
                 continue
 

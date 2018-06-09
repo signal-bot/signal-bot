@@ -13,8 +13,10 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir = TemporaryDirectory()
 
         config = {
-            'plugins': ['pingpong', 'pingponglocktest'],
-            'master': '+123'}
+            'master': '+123',
+            'plugins': ['pingpong'],
+            'testing_plugins': ['pingponglocktest'],
+        }
         configfile = Path.joinpath(Path(self.tempdir.name), 'config.yaml')
         yaml.dump(config, configfile.open('w'))
 
@@ -56,6 +58,7 @@ class HelloWorldTest(unittest.TestCase):
         time.sleep(.1)
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         time.sleep(5)
+        print(self.mocker.fromsignalbot)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
             ['start pong', [], ['+123']],
