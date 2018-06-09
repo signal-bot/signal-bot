@@ -155,13 +155,13 @@ class Plugin:
         t.start()
         return t
 
-    def receive(self, message):
+    def triagemessage(self, message):
         """
         To be implemented by the respective plugin class
         """
         pass
 
-    def start_receive(self, message):
+    def start_processing(self, message):
         """
         Starts processing of a message.
         This will start a separate thread in which the actual processing is
@@ -169,4 +169,4 @@ class Plugin:
         """
         return self._start(chat_id=message.get_chat_id(),
                            args=[message],
-                           target=self.receive)
+                           target=self.triagemessage)

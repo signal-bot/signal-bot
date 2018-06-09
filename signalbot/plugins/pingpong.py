@@ -3,7 +3,7 @@ from .plugin import Plugin
 
 class PingPong(Plugin):
 
-    def receive(self, message):
+    def triagemessage(self, message):
         if message.text != 'ping':
             return
 
