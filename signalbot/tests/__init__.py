@@ -58,7 +58,6 @@ class HelloWorldTest(unittest.TestCase):
         time.sleep(.1)
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         time.sleep(5)
-        print(self.mocker.fromsignalbot)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
             ['start pong', [], ['+123']],
