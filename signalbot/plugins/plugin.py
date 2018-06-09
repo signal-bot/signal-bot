@@ -113,30 +113,18 @@ class Plugin:
 
     def __init__(self, bot):
         self.bot = bot
+        self.chat_lock = None
 
-        # Per-chat locks
-        self._chat_locks = {}
-
-    def get_chat_lock(self, chat_id):
-        """
-        Acquires lock that can be used through `with` to ensure the currently
-        running thread is the only running thread. Will block other threads
-        from starting and wait for currently running threads to finish.
-        Note that other threads currently waiting to acquire the per-chat lock
-        do not count as running.
-        """
-        return self._chat_locks[chat_id]
-
-    def _thread_start(self, chat_id, args, target):
+    def _thread_start(self, args, target):
         # Enter threadcount context to make get_chat_lock() work correctly
-        with self.get_chat_lock(chat_id).get_threadcount_context():
+        with self.chat_lock.get_threadcount_context():
             # Do actual stuff
             target(*args)
 
-    def _start(self, chat_id, args, target):
+    def _start(self, args, target):
         """
         Start a new thread in which `target` is called with `args` as
-        arguments. In the created thread, get_chat_lock() can be used to
+        arguments. In the created thread, chat_lock can be used to
         ensure exclusive access to per-chat resources.
         This method is used for incoming messages and is planned to be used
         for scheduled events as well.
@@ -144,12 +132,12 @@ class Plugin:
 
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
-        if chat_id not in self._chat_locks:
-            self._chat_locks[chat_id] = ChatLock()
+        if self.chat_lock is None:
+            self.chat_lock = ChatLock()
 
         # Create extra thread to actually handle the message
         t = Thread(
-            args=[chat_id, args, target],
+            args=[args, target],
             daemon=True,
             target=self._thread_start)
         t.start()
@@ -167,6 +155,5 @@ class Plugin:
         This will start a separate thread in which the actual processing is
         done and return that thread.
         """
-        return self._start(chat_id=message.get_chat_id(),
-                           args=[message],
+        return self._start(args=[message],
                            target=self.triagemessage)
