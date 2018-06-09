@@ -53,14 +53,15 @@ class Signalbot(object):
 
         self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
         self.config = yaml.load(self._configfile.open('r'))
-        if 'bus' not in self.config:
-            self.config['bus'] = None
-        if 'plugins' not in self.config:
-            self.config['plugins'] = []
-        if 'master' not in self.config:
-            self.config['master'] = None
-        if 'enabled' not in self.config:
-            self.config['enabled'] = {}
+
+        defaults = {
+            'bus': None,
+            'enabled': {},
+            'master': None,
+            'plugins': [],
+        }
+        for key, default in defaults.items():
+            self.config[key] = self.config.get(key, default)
 
     def _save_config(self):
         yaml.dump(self.config, self._configfile.open('w'))
