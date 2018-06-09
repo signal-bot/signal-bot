@@ -15,6 +15,7 @@ install:
     /usr/bin/python3 -V;
     /usr/bin/pip3 install -r /travis/requirements.txt;
     /usr/bin/pip3 install -r /travis/requirements-test.txt;
+    /usr/bin/pip3 install -e .;
     /usr/bin/dbus-launch --sh-syntax > dbus;"
 
 script:
