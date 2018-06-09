@@ -1,11 +1,10 @@
 from signalbot.plugins.plugin import Plugin
+from time import sleep
 
 
 class PingPongLockTest(Plugin):
 
     def triagemessage(self, message):
-
-        from time import sleep
 
         if message.text == 'backup2':
             sleep(1)
