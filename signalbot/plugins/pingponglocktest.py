@@ -2,6 +2,7 @@ from .plugin import Plugin
 
 
 class PingPongLockTest(Plugin):
+
     def receive(self, message):
 
         from time import sleep

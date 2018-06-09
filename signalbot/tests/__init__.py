@@ -1,10 +1,10 @@
+from pathlib import Path
 from signalclidbusmock import Mocker
+from subprocess import Popen
+from tempfile import TemporaryDirectory
 import time
 import unittest
-from tempfile import TemporaryDirectory
-from pathlib import Path
 import yaml
-from subprocess import Popen
 
 
 class HelloWorldTest(unittest.TestCase):
