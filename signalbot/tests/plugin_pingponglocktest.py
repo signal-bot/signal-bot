@@ -10,7 +10,7 @@ class PingPongLockTest(Plugin):
         if message.text == 'backup2':
             sleep(1)
             message.reply("Acquiring lock...")
-            with self.get_chat_lock(message.get_chat_id()):
+            with self.chat_lock:
                 message.reply("Locked - sleeping 2 sec ...")
                 sleep(1)
                 message.reply("... done sleeping / locking")
@@ -18,7 +18,7 @@ class PingPongLockTest(Plugin):
 
         if message.text == 'backup':
             message.reply("Acquiring lock...")
-            with self.get_chat_lock(message.get_chat_id()):
+            with self.chat_lock:
                 message.reply("Locked - sleeping 2 sec ...")
                 sleep(1)
                 message.reply("... done sleeping / locking")

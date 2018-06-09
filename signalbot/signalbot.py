@@ -83,12 +83,13 @@ class Signalbot(object):
 
         self._plugins = {
             plugin: import_module('.plugins.{}'.format(plugin),
-                                  package='signalbot').__plugin__(self)
+                                  package='signalbot').__plugin__
             for plugin in self.config['plugins']}
         self._plugins.update({
             plugin: import_module('.tests.plugin_{}'.format(plugin),
-                                  package='signalbot').__plugin__(self)
+                                  package='signalbot').__plugin__
             for plugin in self.config['testing_plugins']})
+        self._plugins_per_chat = {}
 
         self._loop = GLib.MainLoop()
         self._thread = Thread(daemon=True, target=self._loop.run)
@@ -121,7 +122,10 @@ class Signalbot(object):
         for plugin in self.config['enabled'][chat_id]:
             if plugin not in self._plugins:
                 continue
-            self._plugins[plugin].start_processing(message)
+            pluginid = '{}.{}'.format(plugin, chat_id)
+            if pluginid not in self._plugins_per_chat:
+                self._plugins_per_chat[pluginid] = self._plugins[plugin](self)
+            self._plugins_per_chat[pluginid].start_processing(message)
 
     def _master_print_help(self, message):
         message.reply("""
