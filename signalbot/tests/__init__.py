@@ -62,7 +62,7 @@ class HelloWorldTest(unittest.TestCase):
             ['start pong', [], ['+123']],
             ['Acquiring lock...', [], ['+123']],
             ['pong', [], ['+123']],
-            ['Locked - sleeping 2 sec ...', [], ['+123']],
+            ['Locked - sleeping 1 sec ...', [], ['+123']],
             ['... done sleeping / locking', [], ['+123']],
             ['start pong', [], ['+123']],
             ['pong', [], ['+123']]]
@@ -73,17 +73,20 @@ class HelloWorldTest(unittest.TestCase):
     def test_locking_twoblocking(self):
         self.mocker.messageSignalbot('+123', None, '/enable pingponglocktest',
                                      [])
-        self.mocker.messageSignalbot('+123', None, 'backup2', [])
-        self.mocker.messageSignalbot('+123', None, 'backup2', [])
+        self.mocker.messageSignalbot('+123', None, 'backup_A', [])
+        self.mocker.messageSignalbot('+123', None, 'backup_B', [])
         time.sleep(5)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
-            ['Acquiring lock...', [], ['+123']],
-            ['Acquiring lock...', [], ['+123']],
-            ['Locked - sleeping 2 sec ...', [], ['+123']],
-            ['... done sleeping / locking', [], ['+123']],
-            ['Locked - sleeping 2 sec ...', [], ['+123']],
-            ['... done sleeping / locking', [], ['+123']]]
-        self.assertEqual(len(expect_messages), len(self.mocker.fromsignalbot))
-        for want, have in zip(expect_messages, self.mocker.fromsignalbot):
-            self.assertCountEqual(want, have[1:])
+            ['backup_A: Attempting to acquire exclusive lock...',
+             [], ['+123']],
+            ['backup_B: Attempting to acquire exclusive lock...',
+             [], ['+123']],
+            ['backup_B: Blocking exclusive thread since there is already '
+             'another blocking thread running. ❌', [], ['+123']],
+            ['backup_A: Locked - sleeping 1 sec ...', [], ['+123']],
+            ['backup_A: ... done sleeping / locking', [], ['+123']],
+        ]
+        self.assertCountEqual(expect_messages,
+                              [have[1:]
+                               for have in self.mocker.fromsignalbot])
