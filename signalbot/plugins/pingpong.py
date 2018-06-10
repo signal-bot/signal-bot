@@ -7,7 +7,7 @@ class PingPong(Plugin):
         if message.text != 'ping':
             return
 
-        message.reply('pong')
+        self.reply('pong')
 
 
 __plugin__ = PingPong
