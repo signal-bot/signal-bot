@@ -33,11 +33,11 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir.cleanup()
 
     def test_master(self):
-        self.mocker.messageSignalbot('+000', None, '/enable pingpong', [])
+        self.mocker.messageSignalbot('+000', None, '//enable pingpong', [])
         self.mocker.messageSignalbot('+000', None, 'ping', [])
-        self.mocker.messageSignalbot('+123', None, '/enable pingpong', [])
+        self.mocker.messageSignalbot('+123', None, '//enable pingpong', [])
         self.mocker.messageSignalbot('+123', None, 'ping', [])
-        self.mocker.messageSignalbot('+123', None, '/disable pingpong', [])
+        self.mocker.messageSignalbot('+123', None, '//disable pingpong', [])
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         time.sleep(.1)
         self.assertCountEqual(self.mocker.fromsignalbot[0][1:],
@@ -50,7 +50,7 @@ class HelloWorldTest(unittest.TestCase):
                               ['Plugin pingpong disabled. ✔', [], ['+123']])
 
     def test_locking_basic(self):
-        self.mocker.messageSignalbot('+123', None, '/enable pingponglocktest',
+        self.mocker.messageSignalbot('+123', None, '//enable pingponglocktest',
                                      [])
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         self.mocker.messageSignalbot('+123', None, 'backup', [])
@@ -71,7 +71,7 @@ class HelloWorldTest(unittest.TestCase):
             self.assertCountEqual(want, have[1:])
 
     def test_locking_twoblocking(self):
-        self.mocker.messageSignalbot('+123', None, '/enable pingponglocktest',
+        self.mocker.messageSignalbot('+123', None, '//enable pingponglocktest',
                                      [])
         self.mocker.messageSignalbot('+123', None, 'backup_A', [])
         self.mocker.messageSignalbot('+123', None, 'backup_B', [])
