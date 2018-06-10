@@ -95,8 +95,11 @@ class ChatLock:
 
 class Plugin:
 
-    def __init__(self, bot):
+    def __init__(self, bot, reply, error, success):
         self.bot = bot
+        self.reply = reply
+        self.error = error
+        self.success = success
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.chat_lock = ChatLock()

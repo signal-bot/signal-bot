@@ -17,17 +17,18 @@ class Message(object):
         self.text = text
         self.attachmentfiles = attachmentfiles
 
+    @property
     def is_group(self):
         return self.group_id != []
 
     def get_chat_id(self):
-        if self.is_group():
+        if self.is_group:
             return self.group_id
         else:
             return self.sender
 
     def reply(self, text, attachments=[]):
-        if self.is_group():
+        if self.is_group:
             self.bot.send_group_message(text, attachments, self.group_id)
         else:
             self.bot.send_message(text, attachments, [self.sender])
@@ -124,7 +125,8 @@ class Signalbot(object):
                 continue
             pluginid = '{}.{}'.format(plugin, chat_id)
             if pluginid not in self._plugins_per_chat:
-                self._plugins_per_chat[pluginid] = self._plugins[plugin](self)
+                self._plugins_per_chat[pluginid] = self._plugins[plugin](
+                    self, message.reply, message.error, message.success)
             self._plugins_per_chat[pluginid].start_processing(message)
 
     def _master_print_help(self, message):
