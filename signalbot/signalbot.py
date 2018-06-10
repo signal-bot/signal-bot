@@ -112,7 +112,7 @@ class Signalbot(object):
                           timestamp, sender, group_id, text, attachmentfiles)
 
         # Master messages are handled internally and in main thread
-        if message.text.startswith('/'):
+        if message.text.startswith('//'):
             self._master_message(message)
             return
 
@@ -132,11 +132,11 @@ class Signalbot(object):
     def _master_print_help(self, message):
         message.reply("""
             Available commands:
-            /help
-            /enable plugin [plugin ...]
-            /disable plugin  [plugin ...]
-            /list-enabled
-            /list-available
+            //help
+            //enable plugin [plugin ...]
+            //disable plugin  [plugin ...]
+            //list-enabled
+            //list-available
             """)
 
     def _master_enable(self, message, params):
@@ -193,7 +193,7 @@ class Signalbot(object):
             message.error("You are not my master.")
             return
 
-        params = message.text[1:].split(' ')
+        params = message.text[2:].split(' ')
         command = params[0]
         params = params[1:]
         if command == "help":
