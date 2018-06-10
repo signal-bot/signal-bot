@@ -5,6 +5,7 @@ class ChatThreadcount:
 
     def __init__(self, chat_lock):
         self._chat_lock = chat_lock
+        self._entry_lock = self._chat_lock.entry_lock
         self._count = 0
 
         # Condition to protect _count
@@ -19,7 +20,7 @@ class ChatThreadcount:
         #   self._count += 1
         # which would mean the new blocking thread would start despite our
         # new thread running!
-        with self._chat_lock.get_suspend_entry_lock():
+        with self._entry_lock:
 
             # Check if there is a blocking thread running and wait for it to
             # finish if needed.
@@ -39,7 +40,7 @@ class ChatThreadcount:
             # Decrease thread count
             self._count -= 1
 
-            # Notify for wait_until_only_blocking_candidates()
+            # Notify for wait_until_only_one()
             # No need for notify_all() since there can only be one
             # blocking thread anyway.
             self._condition.notify()
@@ -54,40 +55,34 @@ class ChatLock:
 
     def __init__(self):
         self._lock = Lock()
-        self._entry_lock = Lock()
-        self._threadcount = ChatThreadcount(self)
-
-    def get_threadcount_context(self):
-        return self._threadcount
-
-    def get_suspend_entry_lock(self):
-        return self._entry_lock
+        self.entry_lock = Lock()
+        self.threadcount = ChatThreadcount(self)
 
     def __enter__(self):
 
         # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
         # prevent race conditions
-        with self._entry_lock:
+        with self.entry_lock:
 
             # Ensure no messages start processing for the same chat. Also
             # ensure there is only one blocking thread running at all times
             unblocked = self._lock.acquire(False)
 
         # Ensure all other threads have finished processing.
-        # Needs to be done outside self._entry_lock. Otherwise there can be a
+        # Needs to be done outside self.entry_lock. Otherwise there can be a
         # deadlock if one thread is at
         #    wait_until_only_one()
         # and another thread is at
-        #    with self._entry_lock
+        #    with self.entry_lock
         if unblocked:
-            self._threadcount.wait_until_only_one()
+            self.threadcount.wait_until_only_one()
 
         # For now, we force the plugin to properly deal with denied exclusive
         # threads (as well as allow plugins to clean up and send an error
         # message to the chat) by throwing an exception; there ought to be a
         # nicer way that does not require plugin developers to do the
         # try-with-except...probably to be implemented in the Plugin class
-        if not unblocked:
+        else:
             raise Exception('Exclusive lock could not be acquired.')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -105,12 +100,16 @@ class Plugin:
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.chat_lock = ChatLock()
+        self._threadcount = self.chat_lock.threadcount
 
-    def _thread_start(self, args, target):
-        # Enter threadcount context to make get_chat_lock() work correctly
-        with self.chat_lock.get_threadcount_context():
-            # Do actual stuff
-            target(*args)
+    def start_processing(self, message):
+        """
+        Starts processing of a message.
+        This will start a separate thread in which the actual processing is
+        done and return that thread.
+        """
+        return self._start(args=[message],
+                           target=self.triagemessage)
 
     def _start(self, args, target):
         """
@@ -127,17 +126,14 @@ class Plugin:
         t.start()
         return t
 
+    def _thread_start(self, args, target):
+        # Enter threadcount context to make get_chat_lock() work correctly
+        with self._threadcount:
+            # Do actual stuff
+            target(*args)
+
     def triagemessage(self, message):
         """
         To be implemented by the respective plugin class
         """
         pass
-
-    def start_processing(self, message):
-        """
-        Starts processing of a message.
-        This will start a separate thread in which the actual processing is
-        done and return that thread.
-        """
-        return self._start(args=[message],
-                           target=self.triagemessage)
