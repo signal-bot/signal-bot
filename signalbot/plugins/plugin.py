@@ -73,9 +73,14 @@ class ChatLock:
             # ensure there is only one blocking thread running at all times
             unblocked = self._lock.acquire(False)
 
-            # Ensure all other threads have finished processing.
-            if unblocked:
-                self._threadcount.wait_until_only_one()
+        # Ensure all other threads have finished processing.
+        # Needs to be done outside self._entry_lock. Otherwise there can be a
+        # deadlock if one thread is at
+        #    wait_until_only_one()
+        # and another thread is at
+        #    with self._entry_lock
+        if unblocked:
+            self._threadcount.wait_until_only_one()
 
         # For now, we force the plugin to properly deal with denied exclusive
         # threads (as well as allow plugins to clean up and send an error
