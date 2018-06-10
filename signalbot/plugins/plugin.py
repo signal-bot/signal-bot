@@ -85,18 +85,25 @@ class ChatLock:
 
             # Ensure no messages start processing for the same chat. Also
             # ensure there is only one blocking thread running at all times
-            self._lock.acquire()
+            unblocked = self._lock.acquire(False)
 
             # Ensure all previous message have finished processing.
-            # Only the candidates currently waiting for self._lock are still
-            # allowed. Allowing them is necessary to avoid a deadlock when e.g.
+            # Only the candidate currently waiting for self._lock is still
+            # allowed. Allowing it is necessary to avoid a deadlock when e.g.
             # one thread is at
             #    self._lock.acquire()
             # and another thread is at
             #    self._threadcount.wait_until_only_blocking_candidates()
-            self._threadcount.wait_until_only_blocking_candidates()
+            if unblocked:
+                self._threadcount.wait_until_only_blocking_candidates()
 
-        return self
+        # For now, we force the plugin to properly deal with denied exclusive
+        # threads (as well as allow plugins to clean up and send an error
+        # message to the chat) by throwing an exception; there ought to be a
+        # nicer way that does not require plugin developers to do the
+        # try-with-except...probably to be implemented in the Plugin class
+        if not unblocked:
+            raise Exception('Exclusive lock could not be acquired.')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._lock.release()
