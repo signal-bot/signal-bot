@@ -70,11 +70,12 @@ class HelloWorldTest(unittest.TestCase):
         for want, have in zip(expect_messages, self.mocker.fromsignalbot):
             self.assertCountEqual(want, have[1:])
 
-    def test_locking_twoblocking(self):
+    def test_locking_threeblocking(self):
         self.mocker.messageSignalbot('+123', None, '//enable pingponglocktest',
                                      [])
         self.mocker.messageSignalbot('+123', None, 'backup_A', [])
         self.mocker.messageSignalbot('+123', None, 'backup_B', [])
+        self.mocker.messageSignalbot('+123', None, 'backup_C', [])
         time.sleep(5)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
@@ -82,10 +83,13 @@ class HelloWorldTest(unittest.TestCase):
              [], ['+123']],
             ['backup_B: Attempting to acquire exclusive lock...',
              [], ['+123']],
-            ['backup_B: Blocking exclusive thread since there is already '
-             'another blocking thread running. ❌', [], ['+123']],
+            ['backup_C: Attempting to acquire exclusive lock...',
+             [], ['+123']],
             ['backup_A: Locked - sleeping 1 sec ...', [], ['+123']],
             ['backup_A: ... done sleeping / locking', [], ['+123']],
+            ['Exclusive lock could not be acquired. ❌', [], ['+123']],
+            ['We want to do our own handling if we cannot get the exclusive '
+             'lock. ❌', [], ['+123']],
         ]
         self.assertCountEqual(expect_messages,
                               [have[1:]

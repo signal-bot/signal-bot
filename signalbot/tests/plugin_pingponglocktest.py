@@ -1,4 +1,4 @@
-from signalbot.plugins.plugin import Plugin
+from signalbot.plugins.plugin import Plugin, ExclusivityException
 from time import sleep
 
 
@@ -6,25 +6,29 @@ class PingPongLockTest(Plugin):
 
     def triagemessage(self, message):
 
-        if message.text in ['backup_A', 'backup_B']:
-            if message.text == 'backup_B':
+        if message.text in ['backup_A', 'backup_B', 'backup_C']:
+            if message.text != 'backup_A':
                 sleep(1)
             self.reply("{}: Attempting to acquire exclusive lock...".format(
                 message.text))
-            try:
+            if message.text in ['backup_A', 'backup_B']:
                 with self.chat_lock:
                     self.reply("{}: Locked - sleeping 1 sec ...".format(
                         message.text))
                     sleep(1)
                     self.reply("{}: ... done sleeping / locking".format(
                         message.text))
-            except Exception as e:
-                if str(e) == 'Exclusive lock could not be acquired.':
-                    self.error('{}: Blocking exclusive thread since there '
-                               'is already another blocking thread running.'
-                               ''.format(message.text))
-                else:
-                    raise e
+            elif message.text == 'backup_C':
+                try:
+                    with self.chat_lock:
+                        self.reply("{}: Locked - sleeping 1 sec ...".format(
+                            message.text))
+                        sleep(1)
+                        self.reply("{}: ... done sleeping / locking".format(
+                            message.text))
+                except ExclusivityException:
+                    self.error('We want to do our own handling if we cannot '
+                               'get the exclusive lock.')
             return
 
         elif message.text == 'backup':

@@ -51,6 +51,10 @@ class ChatThreadcount:
                 self._condition.wait()
 
 
+class ExclusivityException(Exception):
+    pass
+
+
 class ChatLock:
 
     def __init__(self):
@@ -83,7 +87,7 @@ class ChatLock:
         # nicer way that does not require plugin developers to do the
         # try-with-except...probably to be implemented in the Plugin class
         else:
-            raise Exception('Exclusive lock could not be acquired.')
+            raise ExclusivityException('Exclusive lock could not be acquired.')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._lock.release()
@@ -133,7 +137,10 @@ class Plugin:
         # Enter threadcount context to make get_chat_lock() work correctly
         with self._threadcount:
             # Do actual stuff
-            target(*args)
+            try:
+                target(*args)
+            except ExclusivityException as e:
+                self.error('{}'.format(e))
 
     def triagemessage(self, message):
         """
