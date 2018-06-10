@@ -46,7 +46,7 @@ class ChatThreadcount:
 
     def wait_until_only_one(self):
         with self._condition:
-            while self._count > 0:
+            while self._count > 1:
                 self._condition.wait()
 
 
