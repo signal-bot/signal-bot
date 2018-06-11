@@ -107,8 +107,10 @@ class Plugin(ABC):
         self.chat_lock = ChatLock()
         self._threadcount = self.chat_lock.threadcount
 
-    def reply(self, text, attachments=[]):
+    def _reply(self, text, attachments=[]):
         self.bot.send_message(text, attachments, self.chat_id)
+
+    reply = _reply
 
     def error(self, text, attachments=[]):
         self.bot.send_error(text, attachments, self.chat_id)
