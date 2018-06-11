@@ -25,7 +25,7 @@ class HelloWorldTest(unittest.TestCase):
 
         self.bot_popen = Popen(
             ['signal-bot', '--data-dir', self.tempdir.name, '--mocker'])
-        time.sleep(.3)
+        time.sleep(.5)
 
     def tearDown(self):
         self.bot_popen.kill()
