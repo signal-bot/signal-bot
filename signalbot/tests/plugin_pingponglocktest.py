@@ -12,7 +12,7 @@ class PingPongLockTest(Plugin):
             self.reply("{}: Attempting to acquire exclusive lock...".format(
                 message.text))
             if message.text in ['backup_A', 'backup_B']:
-                with self.chat_lock:
+                with self.isolated_thread:
                     self.reply("{}: Locked - sleeping 1 sec ...".format(
                         message.text))
                     sleep(1)
@@ -20,7 +20,7 @@ class PingPongLockTest(Plugin):
                         message.text))
             elif message.text == 'backup_C':
                 try:
-                    with self.chat_lock:
+                    with self.isolated_thread:
                         self.reply("{}: Locked - sleeping 1 sec ...".format(
                             message.text))
                         sleep(1)
@@ -33,7 +33,7 @@ class PingPongLockTest(Plugin):
 
         elif message.text == 'backup':
             self.reply("Acquiring lock...")
-            with self.chat_lock:
+            with self.isolated_thread:
                 self.reply("Locked - sleeping 1 sec ...")
                 sleep(1)
                 self.reply("... done sleeping / locking")

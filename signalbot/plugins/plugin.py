@@ -104,7 +104,8 @@ class Plugin(ABC):
         self.chat_id = chat_id
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
-        self.chat_lock = ChatLock()
+        self.isolated_thread = ChatLock()
+        self.resource_lock = Lock()
 
     def _reply(self, text, attachments=[]):
         self.bot.send_message(text, attachments, self.chat_id)
@@ -129,7 +130,7 @@ class Plugin(ABC):
     def _start(self, args, target):
         """
         Start a new thread in which `target` is called with `args` as
-        arguments. In the created thread, chat_lock can be used to
+        arguments. In the created thread, isolated_thread can be used to
         ensure exclusive access to per-chat resources.
         This method is used for incoming messages and is planned to be used
         for scheduled events as well.
@@ -142,8 +143,8 @@ class Plugin(ABC):
         return t
 
     def _thread_start(self, args, target):
-        # Enter threadcounter context to make chat_lock work correctly
-        with self.chat_lock.threadcounter:
+        # Enter threadcounter context to make isolated_thread work correctly
+        with self.isolated_thread.threadcounter:
             # Do actual stuff
             try:
                 target(*args)
