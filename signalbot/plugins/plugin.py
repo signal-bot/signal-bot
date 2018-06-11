@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from threading import Condition, Lock, Thread
 
 
@@ -96,7 +97,7 @@ class ChatLock:
             pass
 
 
-class Plugin:
+class Plugin(ABC):
 
     def __init__(self, bot, chat_id):
         self.bot = bot
@@ -148,6 +149,7 @@ class Plugin:
             except ExclusivityException as e:
                 self.error('{}'.format(e))
 
+    @abstractmethod
     def triagemessage(self, message):
         """
         To be implemented by the respective plugin class
