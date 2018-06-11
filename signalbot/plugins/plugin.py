@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from threading import Condition, Lock, Thread
 
 
-class ChatThreadcount:
+class ChatThreadcounter:
 
     def __init__(self, chat_lock):
         self._chat_lock = chat_lock
@@ -61,7 +61,7 @@ class ChatLock:
     def __init__(self):
         self._lock = Lock()
         self.entry_lock = Lock()
-        self.threadcount = ChatThreadcount(self)
+        self.threadcounter = ChatThreadcounter(self)
 
     def __enter__(self):
         # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
@@ -79,7 +79,7 @@ class ChatLock:
         # and another thread is at
         #    with self.entry_lock
         if unblocked:
-            self.threadcount.wait_until_only_one()
+            self.threadcounter.wait_until_only_one()
 
         # For now, we force the plugin to properly deal with denied exclusive
         # threads (as well as allow plugins to clean up and send an error
@@ -105,7 +105,6 @@ class Plugin(ABC):
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.chat_lock = ChatLock()
-        self._threadcount = self.chat_lock.threadcount
 
     def _reply(self, text, attachments=[]):
         self.bot.send_message(text, attachments, self.chat_id)
@@ -143,8 +142,8 @@ class Plugin(ABC):
         return t
 
     def _thread_start(self, args, target):
-        # Enter threadcount context to make get_chat_lock() work correctly
-        with self._threadcount:
+        # Enter threadcounter context to make chat_lock work correctly
+        with self.chat_lock.threadcounter:
             # Do actual stuff
             try:
                 target(*args)
