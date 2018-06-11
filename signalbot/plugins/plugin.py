@@ -63,7 +63,6 @@ class ChatLock:
         self.threadcount = ChatThreadcount(self)
 
     def __enter__(self):
-
         # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
         # prevent race conditions
         with self.entry_lock:
@@ -99,15 +98,22 @@ class ChatLock:
 
 class Plugin:
 
-    def __init__(self, bot, reply, error, success):
+    def __init__(self, bot, chat_id):
         self.bot = bot
-        self.reply = reply
-        self.error = error
-        self.success = success
+        self.chat_id = chat_id
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.chat_lock = ChatLock()
         self._threadcount = self.chat_lock.threadcount
+
+    def reply(self, text, attachments=[]):
+        self.bot.send_message(text, attachments, self.chat_id)
+
+    def error(self, text, attachments=[]):
+        self.bot.send_error(text, attachments, self.chat_id)
+
+    def success(self, text, attachments=[]):
+        self.bot.send_success(text, attachments, self.chat_id)
 
     def start_processing(self, message):
         """

@@ -23,16 +23,13 @@ class Message(object):
             self.chat_id = self.sender
 
     def reply(self, text, attachments=[]):
-        if self.is_group:
-            self.bot.send_group_message(text, attachments, self.group_id)
-        else:
-            self.bot.send_message(text, attachments, [self.sender])
+        self.bot.send_message(text, attachments, self.chat_id)
 
     def error(self, text, attachments=[]):
-        self.reply(text + ' ❌', attachments=attachments)
+        self.bot.send_error(text, attachments, self.chat_id)
 
     def success(self, text, attachments=[]):
-        self.reply(text + ' ✔', attachments=attachments)
+        self.bot.send_success(text, attachments, self.chat_id)
 
 
 class Signalbot(object):
@@ -95,11 +92,17 @@ class Signalbot(object):
         self.start()
         self._thread.join()
 
-    def send_message(self, text, attachments, receivers):
-        self._signal.sendMessage(text, attachments, receivers)
+    def send_message(self, text, attachments, chat_id):
+        if isinstance(chat_id, list):
+            self. _signal.sendGroupMessage(text, attachments, chat_id)
+        else:
+            self._signal.sendMessage(text, attachments, [chat_id])
 
-    def send_group_message(self, text, attachments, group_id):
-        self. _signal.sendGroupMessage(text, attachments, group_id)
+    def send_error(self, text, attachments, chat_id):
+        self.send_message(text + ' ❌', attachments, chat_id)
+
+    def send_success(self, text, attachments, chat_id):
+        self.send_message(text + ' ✔', attachments, chat_id)
 
     def _triagemessage(self,
                        timestamp, sender, group_id, text, attachmentfiles):
@@ -121,7 +124,7 @@ class Signalbot(object):
             pluginid = '{}.{}'.format(plugin, chat_id)
             if pluginid not in self._plugins_per_chat:
                 self._plugins_per_chat[pluginid] = self._plugins[plugin](
-                    self, message.reply, message.error, message.success)
+                    self, chat_id)
             self._plugins_per_chat[pluginid].start_processing(message)
 
     def _master_print_help(self, message):
