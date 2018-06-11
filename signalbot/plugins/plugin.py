@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from threading import Condition, Lock, Thread
 
 
-class ChatThreadcounter:
+class ChatThreadcounter(object):
 
     def __init__(self, chat_lock):
         self._chat_lock = chat_lock
@@ -56,7 +56,7 @@ class ExclusivityException(Exception):
     pass
 
 
-class ChatLock:
+class ChatLock(object):
 
     def __init__(self):
         self._lock = Lock()
