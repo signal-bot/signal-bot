@@ -16,16 +16,11 @@ class Message(object):
         self.group_id = group_id
         self.text = text
         self.attachmentfiles = attachmentfiles
-
-    @property
-    def is_group(self):
-        return self.group_id != []
-
-    def get_chat_id(self):
+        self.is_group = self.group_id != []
         if self.is_group:
-            return self.group_id
+            self.chat_id = self.group_id
         else:
-            return self.sender
+            self.chat_id = self.sender
 
     def reply(self, text, attachments=[]):
         if self.is_group:
@@ -117,7 +112,7 @@ class Signalbot(object):
             return
 
         # Other messages are handled by plugins and in separate thread
-        chat_id = message.get_chat_id()
+        chat_id = message.chat_id
         if chat_id not in self.config['enabled']:
             return
         for plugin in self.config['enabled'][chat_id]:
@@ -147,7 +142,7 @@ class Signalbot(object):
                 message.error("Plugin {} not loaded".format(plugin))
                 continue
 
-            chat_id = message.get_chat_id()
+            chat_id = message.chat_id
             if chat_id not in self.config['enabled']:
                 self.config['enabled'][chat_id] = []
 
@@ -161,7 +156,7 @@ class Signalbot(object):
 
     def _master_disable(self, message, params):
         for plugin in params:
-            chat_id = message.get_chat_id()
+            chat_id = message.chat_id
 
             if chat_id not in self.config['enabled'] or \
                     plugin not in self.config['enabled'][chat_id]:
@@ -176,7 +171,7 @@ class Signalbot(object):
 
     def _master_list_enabled(self, message):
         reply = "Enabled plugins:\n"
-        chat_id = message.get_chat_id()
+        chat_id = message.chat_id
         if chat_id in self.config['enabled']:
             for plugin in self.config['enabled'][chat_id]:
                 reply += "{}\n".format(plugin)
