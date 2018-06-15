@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from threading import Condition, Lock, Thread
+from pathlib import Path
 
 
 class ChatThreadcounter(object):
@@ -97,24 +98,32 @@ class ChatLock(object):
             pass
 
 
-class Plugin(ABC):
+class PluginChat(ABC):
 
-    def __init__(self, bot, chat_id):
-        self.bot = bot
+    def __init__(self, plugin, chat_id):
+        self.plugin = plugin
         self.chat_id = chat_id
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.isolated_thread = ChatLock()
         self.resource_lock = Lock()
 
+        # Init per-chat directory
+        if isinstance(chat_id, list):
+            dir_name = '-'.join([str(n) for n in chat_id])
+        else:
+            dir_name = chat_id
+        self.data_dir = Path.joinpath(self.plugin.chats_dir, dir_name)
+        Path.mkdir(self.data_dir, exist_ok=True)
+
     def reply(self, text, attachments=[]):
-        self.bot.send_message(text, attachments, self.chat_id)
+        self.plugin.bot.send_message(text, attachments, self.chat_id)
 
     def error(self, text, attachments=[]):
-        self.bot.send_error(text, attachments, self.chat_id)
+        self.plugin.bot.send_error(text, attachments, self.chat_id)
 
     def success(self, text, attachments=[]):
-        self.bot.send_success(text, attachments, self.chat_id)
+        self.plugin.bot.send_success(text, attachments, self.chat_id)
 
     def start_processing(self, message):
         """
@@ -152,6 +161,49 @@ class Plugin(ABC):
     @abstractmethod
     def triagemessage(self, message):
         """
-        To be implemented by the respective plugin class
+        To be implemented by the respective plugin chat class
         """
         pass
+
+
+class Plugin(ABC):
+
+    def __init__(self, bot, enabled_chat_ids):
+
+        self.bot = bot
+
+        # Init per-plugin directory
+        dir_name = 'plugin-'+self.__class__.__name__.lower()
+        self.data_dir = Path.joinpath(self.bot.data_dir, dir_name)
+        self.chats_dir = Path.joinpath(self.data_dir, 'chats')
+        Path.mkdir(self.chats_dir, parents=True, exist_ok=True)
+
+        # Enable chats
+        self._chats = {}
+        for chat_id in enabled_chat_ids:
+            self.enable(chat_id)
+
+    @property
+    @abstractmethod
+    def chat_class(self):
+        """
+        To be implemented by the respective plugin class
+        """
+        return PluginChat
+
+    def enable(self, chat_id):
+        if chat_id not in self._chats:
+            chat_class = self.chat_class()
+            if not issubclass(chat_class, PluginChat):
+                raise Exception("chat_class() did not return a subclass of"
+                                "PluginChat")
+            self._chats[chat_id] = chat_class(self, chat_id)
+
+    def disable(self, chat_id):
+        if chat_id in self._chats:
+            del self._chats[chat_id]
+
+    def triagemessage(self, message):
+        chat_id = message.chat_id
+        if chat_id in self._chats:
+            self._chats[chat_id].start_processing(message)

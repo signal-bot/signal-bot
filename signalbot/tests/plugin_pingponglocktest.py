@@ -1,8 +1,8 @@
-from signalbot.plugins.plugin import Plugin, ExclusivityException
+from signalbot.plugins.plugin import Plugin, PluginChat, ExclusivityException
 from time import sleep
 
 
-class PingPongLockTest(Plugin):
+class PingPongLockTestChat(PluginChat):
 
     def triagemessage(self, message):
 
@@ -42,6 +42,11 @@ class PingPongLockTest(Plugin):
         self.reply('start pong')
         sleep(1)
         self.reply('pong')
+
+
+class PingPongLockTest(Plugin):
+    def chat_class(self):
+        return PingPongLockTestChat
 
 
 __plugin__ = PingPongLockTest

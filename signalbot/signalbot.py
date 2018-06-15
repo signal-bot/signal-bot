@@ -38,13 +38,13 @@ class Signalbot(object):
         self._mocker = mocker
 
         if data_dir is None:
-            self._data_dir = Path.joinpath(Path.home(), '.config', 'signalbot')
+            self.data_dir = Path.joinpath(Path.home(), '.config', 'signalbot')
         elif type(data_dir) is str:
-            self._data_dir = Path(data_dir)
+            self.data_dir = Path(data_dir)
         else:
-            self._data_dir = data_dir
+            self.data_dir = data_dir
 
-        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
+        self._configfile = Path.joinpath(self.data_dir, 'config.yaml')
         self.config = yaml.load(self._configfile.open('r'))
 
         defaults = {
@@ -59,6 +59,19 @@ class Signalbot(object):
 
     def _save_config(self):
         yaml.dump(self.config, self._configfile.open('w'))
+
+    def _init_plugin(self, plugin, test=False):
+        chat_ids = []
+        for chat_id in self.config['enabled']:
+            if plugin in self.config['enabled'][chat_id]:
+                chat_ids.append(chat_id)
+
+        if test:
+            module_name = '.tests.plugin_{}'.format(plugin)
+        else:
+            module_name = '.plugins.{}'.format(plugin)
+        module = import_module(module_name, package='signalbot')
+        return module.__plugin__(bot=self, enabled_chat_ids=chat_ids)
 
     def start(self):
         if self.config['bus'] == 'session' or self.config['bus'] is None:
@@ -75,14 +88,11 @@ class Signalbot(object):
         self._signal.onMessageReceived = self._triagemessage
 
         self._plugins = {
-            plugin: import_module('.plugins.{}'.format(plugin),
-                                  package='signalbot').__plugin__
+            plugin: self._init_plugin(plugin)
             for plugin in self.config['plugins']}
         self._plugins.update({
-            plugin: import_module('.tests.plugin_{}'.format(plugin),
-                                  package='signalbot').__plugin__
+            plugin: self._init_plugin(plugin, test=True)
             for plugin in self.config['testing_plugins']})
-        self._plugins_per_chat = {}
 
         self._loop = GLib.MainLoop()
         self._thread = Thread(daemon=True, target=self._loop.run)
@@ -114,18 +124,9 @@ class Signalbot(object):
             self._master_message(message)
             return
 
-        # Other messages are handled by plugins and in separate thread
-        chat_id = message.chat_id
-        if chat_id not in self.config['enabled']:
-            return
-        for plugin in self.config['enabled'][chat_id]:
-            if plugin not in self._plugins:
-                continue
-            pluginid = '{}.{}'.format(plugin, chat_id)
-            if pluginid not in self._plugins_per_chat:
-                self._plugins_per_chat[pluginid] = self._plugins[plugin](
-                    self, chat_id)
-            self._plugins_per_chat[pluginid].start_processing(message)
+        # Other messages are handled by plugins and in separate threads
+        for _, plugin in self._plugins.items():
+            plugin.triagemessage(message)
 
     def _master_print_help(self, message):
         message.reply("""
@@ -155,6 +156,7 @@ class Signalbot(object):
 
             self.config['enabled'][chat_id].append(plugin)
             self._save_config()
+            self._plugins[plugin].enable(chat_id)
             message.success("Plugin {} enabled.".format(plugin))
 
     def _master_disable(self, message, params):
@@ -166,6 +168,7 @@ class Signalbot(object):
                 message.reply("Plugin {} is already disabled.".format(plugin))
                 continue
 
+            self._plugins[plugin].disable(chat_id)
             self.config['enabled'][chat_id].remove(plugin)
             if not len(self.config['enabled'][chat_id]):
                 del self.config['enabled'][chat_id]
