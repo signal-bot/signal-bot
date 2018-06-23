@@ -18,7 +18,7 @@ class Message(object):
         self.attachmentfiles = attachmentfiles
         self.is_group = self.group_id != []
         if self.is_group:
-            self.chat_id = self.group_id
+            self.chat_id = tuple(self.group_id)
         else:
             self.chat_id = self.sender
 
@@ -93,8 +93,8 @@ class Signalbot(object):
         self._thread.join()
 
     def send_message(self, text, attachments, chat_id):
-        if isinstance(chat_id, list):
-            self. _signal.sendGroupMessage(text, attachments, chat_id)
+        if isinstance(chat_id, tuple):
+            self. _signal.sendGroupMessage(text, attachments, list(chat_id))
         else:
             self._signal.sendMessage(text, attachments, [chat_id])
 
