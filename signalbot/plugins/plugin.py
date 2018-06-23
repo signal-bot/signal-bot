@@ -107,10 +107,8 @@ class Plugin(ABC):
         self.isolated_thread = ChatLock()
         self.resource_lock = Lock()
 
-    def _reply(self, text, attachments=[]):
+    def reply(self, text, attachments=[]):
         self.bot.send_message(text, attachments, self.chat_id)
-
-    reply = _reply
 
     def error(self, text, attachments=[]):
         self.bot.send_error(text, attachments, self.chat_id)
