@@ -4,6 +4,7 @@ from pathlib import Path
 from pydbus import connect, SessionBus, SystemBus
 from threading import Thread
 import yaml
+from .plugins.plugin import PluginRouter
 
 
 class Message(object):
@@ -71,7 +72,14 @@ class Signalbot(object):
         else:
             module_name = '.plugins.{}'.format(plugin)
         module = import_module(module_name, package='signalbot')
-        return module.__plugin__(bot=self, enabled_chat_ids=chat_ids)
+        if hasattr(module, '__plugin_router__'):
+            plugin_class = module.__plugin_router__
+        else:
+            plugin_class = PluginRouter
+        return plugin_class(name=plugin,
+                            chat_class=module.__plugin_chat__,
+                            bot=self,
+                            enabled_chat_ids=chat_ids)
 
     def start(self):
         if self.config['bus'] == 'session' or self.config['bus'] is None:

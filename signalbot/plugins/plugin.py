@@ -166,15 +166,18 @@ class PluginChat(ABC):
         pass
 
 
-class Plugin(ABC):
+class PluginRouter(ABC):
 
-    def __init__(self, bot, enabled_chat_ids):
+    def __init__(self, name, chat_class, bot, enabled_chat_ids):
+
+        self._chat_class = chat_class
+        if not issubclass(self._chat_class, PluginChat):
+            raise Exception("chat_class() must be a a subclass of PluginChat")
 
         self.bot = bot
 
         # Init per-plugin directory
-        dir_name = 'plugin-'+self.__class__.__name__.lower()
-        self.data_dir = Path.joinpath(self.bot.data_dir, dir_name)
+        self.data_dir = Path.joinpath(self.bot.data_dir, 'plugin-'+name)
         self.chats_dir = Path.joinpath(self.data_dir, 'chats')
         Path.mkdir(self.chats_dir, parents=True, exist_ok=True)
 
@@ -183,21 +186,9 @@ class Plugin(ABC):
         for chat_id in enabled_chat_ids:
             self.enable(chat_id)
 
-    @property
-    @abstractmethod
-    def chat_class(self):
-        """
-        To be implemented by the respective plugin class
-        """
-        return PluginChat
-
     def enable(self, chat_id):
         if chat_id not in self._chats:
-            chat_class = self.chat_class()
-            if not issubclass(chat_class, PluginChat):
-                raise Exception("chat_class() did not return a subclass of"
-                                "PluginChat")
-            self._chats[chat_id] = chat_class(self, chat_id)
+            self._chats[chat_id] = self._chat_class(self, chat_id)
 
     def disable(self, chat_id):
         if chat_id in self._chats:

@@ -1,4 +1,4 @@
-from .plugin import Plugin, PluginChat
+from .plugin import PluginChat
 
 
 class PingPongChat(PluginChat):
@@ -10,9 +10,4 @@ class PingPongChat(PluginChat):
         self.reply('pong')
 
 
-class PingPong(Plugin):
-    def chat_class(self):
-        return PingPongChat
-
-
-__plugin__ = PingPong
+__plugin_chat__ = PingPongChat
