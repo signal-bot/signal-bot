@@ -100,7 +100,11 @@ class ChatLock(object):
 
 class PluginChat(ABC):
 
-    def __init__(self, plugin, chat_id):
+    def __init__(self, plugin, chat_id, data_dir_path):
+
+        self._data_dir_checked = False
+        self._data_dir_path = data_dir_path
+
         self.plugin = plugin
         self.chat_id = chat_id
         # Init chat lock, needs to be done in the main thread to avoid race
@@ -108,13 +112,12 @@ class PluginChat(ABC):
         self.isolated_thread = ChatLock()
         self.resource_lock = Lock()
 
-        # Init per-chat directory
-        if isinstance(chat_id, list):
-            dir_name = '-'.join([str(n) for n in chat_id])
-        else:
-            dir_name = chat_id
-        self.data_dir = Path.joinpath(self.plugin.chats_dir, dir_name)
-        Path.mkdir(self.data_dir, exist_ok=True)
+    @property
+    def data_dir(self):
+        if not self._data_dir_checked:
+            Path.mkdir(self._data_dir_path, exist_ok=True, parents=True)
+            self._data_dir_checked = True
+        return self._data_dir_path
 
     def reply(self, text, attachments=[]):
         self.plugin.bot.send_message(text, attachments, self.chat_id)
@@ -168,7 +171,10 @@ class PluginChat(ABC):
 
 class PluginRouter(object):
 
-    def __init__(self, name, chat_class, bot, enabled_chat_ids):
+    def __init__(self, data_dir_path, chat_class, bot, enabled_chat_ids):
+
+        self._data_dir_checked = False
+        self._data_dir_path = data_dir_path
 
         self._chat_class = chat_class
         if not issubclass(self._chat_class, PluginChat):
@@ -176,19 +182,28 @@ class PluginRouter(object):
 
         self.bot = bot
 
-        # Init per-plugin directory
-        self.data_dir = Path.joinpath(self.bot.data_dir, 'plugin-'+name)
-        self.chats_dir = Path.joinpath(self.data_dir, 'chats')
-        Path.mkdir(self.chats_dir, parents=True, exist_ok=True)
-
         # Enable chats
         self._chats = {}
         for chat_id in enabled_chat_ids:
             self.enable(chat_id)
 
+    @property
+    def data_dir(self):
+        if not self._data_dir_checked:
+            Path.mkdir(self._data_dir_path, exist_ok=True)
+            self._data_dir_checked = True
+        return self._data_dir_path
+
     def enable(self, chat_id):
         if chat_id not in self._chats:
-            self._chats[chat_id] = self._chat_class(self, chat_id)
+            if isinstance(chat_id, list):
+                dir_name = '-'.join([str(n) for n in chat_id])
+            else:
+                dir_name = chat_id
+            chat_dir_path = Path.joinpath(self._data_dir_path, 'chats',
+                                          dir_name)
+            self._chats[chat_id] = self._chat_class(self, chat_id,
+                                                    chat_dir_path)
 
     def disable(self, chat_id):
         if chat_id in self._chats:

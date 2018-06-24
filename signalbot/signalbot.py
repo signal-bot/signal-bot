@@ -39,13 +39,13 @@ class Signalbot(object):
         self._mocker = mocker
 
         if data_dir is None:
-            self.data_dir = Path.joinpath(Path.home(), '.config', 'signalbot')
+            self._data_dir = Path.joinpath(Path.home(), '.config', 'signalbot')
         elif type(data_dir) is str:
-            self.data_dir = Path(data_dir)
+            self._data_dir = Path(data_dir)
         else:
-            self.data_dir = data_dir
+            self._data_dir = data_dir
 
-        self._configfile = Path.joinpath(self.data_dir, 'config.yaml')
+        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
         self.config = yaml.load(self._configfile.open('r'))
 
         defaults = {
@@ -67,6 +67,7 @@ class Signalbot(object):
             if plugin in self.config['enabled'][chat_id]:
                 chat_ids.append(chat_id)
 
+        # Load module
         if test:
             module_name = '.tests.plugin_{}'.format(plugin)
         else:
@@ -76,7 +77,8 @@ class Signalbot(object):
             plugin_class = module.__plugin_router__
         else:
             plugin_class = PluginRouter
-        return plugin_class(name=plugin,
+        data_dir_path = Path.joinpath(self._data_dir, 'plugin-'+plugin)
+        return plugin_class(data_dir_path=data_dir_path,
                             chat_class=module.__plugin_chat__,
                             bot=self,
                             enabled_chat_ids=chat_ids)
