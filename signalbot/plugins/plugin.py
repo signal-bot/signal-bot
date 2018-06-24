@@ -166,7 +166,7 @@ class PluginChat(ABC):
         pass
 
 
-class PluginRouter(ABC):
+class PluginRouter(object):
 
     def __init__(self, name, chat_class, bot, enabled_chat_ids):
 
