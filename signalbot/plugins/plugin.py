@@ -100,13 +100,12 @@ class ChatLock(object):
 
 class PluginChat(ABC):
 
-    def __init__(self, plugin, chat_id, data_dir_path):
+    def __init__(self, chat, data_dir):
 
         self._data_dir_checked = False
-        self._data_dir_path = data_dir_path
+        self._data_dir = data_dir
 
-        self.plugin = plugin
-        self.chat_id = chat_id
+        self.chat = chat
         # Init chat lock, needs to be done in the main thread to avoid race
         # conditions
         self.isolated_thread = ChatLock()
@@ -115,18 +114,18 @@ class PluginChat(ABC):
     @property
     def data_dir(self):
         if not self._data_dir_checked:
-            Path.mkdir(self._data_dir_path, exist_ok=True, parents=True)
+            Path.mkdir(self._data_dir, exist_ok=True, parents=True)
             self._data_dir_checked = True
-        return self._data_dir_path
+        return self._data_dir
 
     def reply(self, text, attachments=[]):
-        self.plugin.bot.send_message(text, attachments, self.chat_id)
+        self.chat.reply(text, attachments)
 
     def error(self, text, attachments=[]):
-        self.plugin.bot.send_error(text, attachments, self.chat_id)
+        self.chat.error(text, attachments)
 
     def success(self, text, attachments=[]):
-        self.plugin.bot.send_success(text, attachments, self.chat_id)
+        self.chat.success(text, attachments)
 
     def start_processing(self, message):
         """
@@ -171,45 +170,33 @@ class PluginChat(ABC):
 
 class PluginRouter(object):
 
-    def __init__(self, data_dir_path, chat_class, bot, enabled_chat_ids):
-
+    def __init__(self, data_dir, chat_class):
         self._data_dir_checked = False
-        self._data_dir_path = data_dir_path
+        self._data_dir = data_dir
 
         self._chat_class = chat_class
         if not issubclass(self._chat_class, PluginChat):
             raise Exception("chat_class() must be a a subclass of PluginChat")
 
-        self.bot = bot
-
-        # Enable chats
         self._chats = {}
-        for chat_id in enabled_chat_ids:
-            self.enable(chat_id)
 
     @property
     def data_dir(self):
         if not self._data_dir_checked:
-            Path.mkdir(self._data_dir_path, exist_ok=True)
+            Path.mkdir(self._data_dir, exist_ok=True)
             self._data_dir_checked = True
-        return self._data_dir_path
+        return self._data_dir
 
-    def enable(self, chat_id):
-        if chat_id not in self._chats:
-            if isinstance(chat_id, list):
-                dir_name = '-'.join([str(n) for n in chat_id])
-            else:
-                dir_name = chat_id
-            chat_dir_path = Path.joinpath(self._data_dir_path, 'chats',
-                                          dir_name)
-            self._chats[chat_id] = self._chat_class(self, chat_id,
-                                                    chat_dir_path)
+    def enable(self, chat):
+        if chat.id not in self._chats:
+            chat_dir = Path.joinpath(self._data_dir, 'chats', str(chat))
+            self._chats[chat.id] = self._chat_class(chat, chat_dir)
 
-    def disable(self, chat_id):
-        if chat_id in self._chats:
-            del self._chats[chat_id]
+    def disable(self, chat):
+        if chat.id in self._chats:
+            del self._chats[chat.id]
 
     def triagemessage(self, message):
-        chat_id = message.chat_id
+        chat_id = message.chat.id
         if chat_id in self._chats:
             self._chats[chat_id].start_processing(message)
