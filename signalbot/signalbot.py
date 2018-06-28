@@ -2,10 +2,13 @@ from gi.repository import GLib
 from importlib import import_module
 from pathlib import Path
 from pydbus import connect, SessionBus, SystemBus
+import yaml
 from threading import Thread
 import signal
 from sys import exit
-import yaml
+from tempfile import TemporaryDirectory
+from stat import S_IEXEC, S_IREAD
+from os import chdir
 from .plugins.plugin import PluginRouter
 
 
@@ -133,16 +136,28 @@ class Signalbot(object):
             self._signal = self._bus.get('org.asamk.Signal')
         self._signal.onMessageReceived = self._triagemessage
 
-        self._plugin_routers = {}
-        self._chats = {}
-        for plugin in self._config['plugins']:
-            self._init_plugin(plugin)
-        for plugin in self._config['testing_plugins']:
-            self._init_plugin(plugin, test=True)
+        # Actively discourage chdir in plugins, see _triagemessage
+        self._fakecwd = TemporaryDirectory()
+        Path(self._fakecwd.name).chmod(S_IEXEC)
+        chdir(self._fakecwd.name)
 
-        self._loop = GLib.MainLoop()
-        self._thread = Thread(daemon=True, target=self._loop.run)
-        self._thread.start()
+        try:
+            self._plugin_routers = {}
+            self._chats = {}
+            for plugin in self._config['plugins']:
+                self._init_plugin(plugin)
+            for plugin in self._config['testing_plugins']:
+                self._init_plugin(plugin, test=True)
+
+            self._loop = GLib.MainLoop()
+            self._thread = Thread(daemon=True, target=self._loop.run)
+            self._thread.start()
+        except Exception as e:
+            # Try not to leave empty temporary directories behind when e.g. a
+            # plugin fails to load
+            Path(self._fakecwd.name).chmod(S_IREAD)
+            self._fakecwd.cleanup()
+            raise e
 
         return self
 
@@ -150,8 +165,12 @@ class Signalbot(object):
         self._loop.quit()
         self._thread.join()
         self._signal.onMessageReceived = None
+
         self._plugin_routers = {}
         self._chats = {}
+
+        Path(self._fakecwd.name).chmod(S_IREAD)
+        self._fakecwd.cleanup()
 
     def _sigterm_handler(self, signum, frame):
         # Raises SystemExit exception which then calls __exit__
@@ -195,6 +214,11 @@ class Signalbot(object):
 
         # Other messages are handled by plugins and in separate threads
         chat.triagemessage(message)
+
+        # Check whether we're still in fakecwd
+        if Path.cwd() != Path(self._fakecwd.name):
+            raise Exception("Do not change the working directory. Use absolute"
+                            "paths instead.")
 
     def _master_print_help(self, message):
         message.chat.reply("""
@@ -283,4 +307,3 @@ class Signalbot(object):
             self._master_list_available(message)
         else:
             message.chat.error("Invalid command.")
-
