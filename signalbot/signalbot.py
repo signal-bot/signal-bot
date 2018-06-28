@@ -269,3 +269,5 @@ class Signalbot(object):
         self._loop.quit()
         self._thread.join()
         self._signal.onMessageReceived = None
+        self._plugin_routers = {}
+        self._chats = {}
