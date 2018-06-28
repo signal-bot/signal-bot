@@ -3,6 +3,8 @@ from importlib import import_module
 from pathlib import Path
 from pydbus import connect, SessionBus, SystemBus
 from threading import Thread
+import signal
+from sys import exit
 import yaml
 from .plugins.plugin import PluginRouter
 
@@ -112,7 +114,12 @@ class Signalbot(object):
                 chat = self._get_chat_by_id(chat_id)
                 chat.enable_plugin(plugin, plugin_router)
 
-    def start(self):
+    def __enter__(self):
+
+        # SIGTERMs should also lead to __exit__() being called. Note that
+        # SIGINTs/KeyboardInterrupts are already handled by GLib.MainLoop
+        signal.signal(signal.SIGTERM, self._sigterm_handler)
+
         if self._config['bus'] == 'session' or self._config['bus'] is None:
             self._bus = SessionBus()
         elif self.args.bus == 'system':
@@ -137,8 +144,20 @@ class Signalbot(object):
         self._thread = Thread(daemon=True, target=self._loop.run)
         self._thread.start()
 
-    def start_and_join(self):
-        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._loop.quit()
+        self._thread.join()
+        self._signal.onMessageReceived = None
+        self._plugin_routers = {}
+        self._chats = {}
+
+    def _sigterm_handler(self, signum, frame):
+        # Raises SystemExit exception which then calls __exit__
+        exit(0)
+
+    def wait(self):
         self._thread.join()
 
     def send_message(self, text, attachments, chat):
@@ -265,9 +284,3 @@ class Signalbot(object):
         else:
             message.chat.error("Invalid command.")
 
-    def stop(self):
-        self._loop.quit()
-        self._thread.join()
-        self._signal.onMessageReceived = None
-        self._plugin_routers = {}
-        self._chats = {}
