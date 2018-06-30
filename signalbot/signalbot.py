@@ -25,6 +25,9 @@ class Chat(object):
 
         self._plugin_routers = {}
 
+    def __str__(self):
+        return str(self.id)
+
     def enable_plugin(self, plugin, plugin_router):
         if plugin not in self._plugin_routers:
             self._plugin_routers[plugin] = plugin_router
