@@ -16,14 +16,18 @@ class Chat(object):
 
     def __init__(self, bot, id):
         self._bot = bot
-        self.is_group = (isinstance(id, list) or isinstance(id, tuple))\
-            and tuple(id) != ()
-        # Ensure we have a hashable id
-        if self.is_group:
-            id = tuple(id)
+        self.is_group = isinstance(id, tuple) and id != ()
         self.id = id
 
         self._plugin_routers = {}
+
+    @staticmethod
+    def get_chat_id_from_sender_and_group_id(sender, group_id):
+        if group_id != []:
+            # Ensure we have a hashable id
+            return tuple(group_id)
+        else:
+            return sender
 
     def __str__(self):
         return str(self.id)
@@ -197,12 +201,8 @@ class Signalbot(object):
     def _triagemessage(self,
                        timestamp, sender, group_id, text, attachmentfiles):
 
-        if group_id != []:
-            chat_id = tuple(group_id)
-        else:
-            chat_id = sender
-
         # Don't accumulate Chat instances for chats with no active plugins
+        chat_id = Chat.get_chat_id_from_sender_and_group_id(sender, group_id)
         if chat_id in self._chats:
             chat = self._chats[chat_id]
         else:
