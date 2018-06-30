@@ -22,7 +22,7 @@ class Chat(object):
         self._plugin_routers = {}
 
     @staticmethod
-    def get_chat_id_from_sender_and_group_id(sender, group_id):
+    def get_id_from_sender_and_group_id(sender, group_id):
         if group_id != []:
             # Ensure we have a hashable id
             return tuple(group_id)
@@ -202,7 +202,7 @@ class Signalbot(object):
                        timestamp, sender, group_id, text, attachmentfiles):
 
         # Don't accumulate Chat instances for chats with no active plugins
-        chat_id = Chat.get_chat_id_from_sender_and_group_id(sender, group_id)
+        chat_id = Chat.get_id_from_sender_and_group_id(sender, group_id)
         if chat_id in self._chats:
             chat = self._chats[chat_id]
         else:
