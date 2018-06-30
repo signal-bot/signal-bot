@@ -198,7 +198,7 @@ class Signalbot(object):
                        timestamp, sender, group_id, text, attachmentfiles):
 
         if group_id != []:
-            chat_id = group_id
+            chat_id = tuple(group_id)
         else:
             chat_id = sender
 
