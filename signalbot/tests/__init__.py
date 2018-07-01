@@ -34,10 +34,9 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir.cleanup()
 
     def _assert_expected_messages(self, expect_messages):
-        self.assertCountEqual([['Always at your service! ✔', [], ['+123']]] +
-                              expect_messages,
-                              [have[1:]
-                               for have in self.mocker.fromsignalbot])
+        self.assertEqual([['Always at your service! ✔', [], ['+123']]] +
+                         expect_messages,
+                         [have[1:] for have in self.mocker.fromsignalbot])
 
     def test_master(self):
         self.mocker.messageSignalbot('+000', None, '//enable pingpong', [])
@@ -86,12 +85,12 @@ class HelloWorldTest(unittest.TestCase):
              [], ['+123']],
             ['backup_B: Attempting to acquire exclusive lock...',
              [], ['+123']],
+            ['Exclusive lock could not be acquired. ❌', [], ['+123']],
             ['backup_C: Attempting to acquire exclusive lock...',
              [], ['+123']],
-            ['backup_A: Locked - sleeping 1 sec ...', [], ['+123']],
-            ['backup_A: ... done sleeping / locking', [], ['+123']],
-            ['Exclusive lock could not be acquired. ❌', [], ['+123']],
             ['We want to do our own handling if we cannot get the exclusive '
              'lock. ❌', [], ['+123']],
+            ['backup_A: Locked - sleeping 1 sec ...', [], ['+123']],
+            ['backup_A: ... done sleeping / locking', [], ['+123']],
         ]
         self._assert_expected_messages(expect_messages)
