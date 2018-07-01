@@ -25,7 +25,7 @@ class Chats(dict):
         return super().get(key, default)
 
     @staticmethod
-    def get_id_from_sender_and_group_id(sender, group_id):
+    def get_id_from_sender_and_group_id(sender, group_id=[]):
         if group_id != []:
             # Ensure we have a hashable id
             return tuple(group_id)
@@ -98,6 +98,7 @@ class Signalbot(object):
             'master': None,
             'plugins': [],
             'testing_plugins': [],
+            'startup_notification': False,
         }
 
         self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
@@ -168,6 +169,13 @@ class Signalbot(object):
             self._loop = GLib.MainLoop()
             self._thread = Thread(daemon=True, target=self._loop.run)
             self._thread.start()
+
+            if self._config['startup_notification']:
+                master_chat_id = Chat.get_id_from_sender_and_group_id(
+                    self._config['master'])
+                master_chat = self._get_chat_by_id(master_chat_id)
+                self.send_success('Always at your service!', [], master_chat)
+
         except Exception as e:
             # Try not to leave empty temporary directories behind when e.g. a
             # plugin fails to load

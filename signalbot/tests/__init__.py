@@ -2,7 +2,6 @@ from pathlib import Path
 from signalclidbusmock import Mocker
 from subprocess import Popen
 from tempfile import TemporaryDirectory
-import time
 import unittest
 import yaml
 
@@ -16,6 +15,7 @@ class HelloWorldTest(unittest.TestCase):
             'master': ['+123'],
             'plugins': ['pingpong'],
             'testing_plugins': ['pingponglocktest'],
+            'startup_notification': True,
         }
         configfile = Path.joinpath(Path(self.tempdir.name), 'config.yaml')
         yaml.dump(config, configfile.open('w'))
@@ -25,12 +25,19 @@ class HelloWorldTest(unittest.TestCase):
 
         self.bot_popen = Popen(
             ['signal-bot', '--data-dir', self.tempdir.name, '--mocker'])
-        time.sleep(.5)
+        # Wait for startup notification
+        self.mocker.wait_for_n_messages(n=1)
 
     def tearDown(self):
         self.bot_popen.terminate()
         self.mocker.stop()
         self.tempdir.cleanup()
+
+    def _assert_expected_messages(self, expect_messages):
+        self.assertCountEqual([['Always at your service! ✔', [], ['+123']]] +
+                              expect_messages,
+                              [have[1:]
+                               for have in self.mocker.fromsignalbot])
 
     def test_master(self):
         self.mocker.messageSignalbot('+000', None, '//enable pingpong', [])
@@ -39,24 +46,22 @@ class HelloWorldTest(unittest.TestCase):
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         self.mocker.messageSignalbot('+123', None, '//disable pingpong', [])
         self.mocker.messageSignalbot('+123', None, 'ping', [])
-        time.sleep(.1)
-        self.assertCountEqual(self.mocker.fromsignalbot[0][1:],
-                              ['You are not my master. ❌', [], ['+000']])
-        self.assertCountEqual(self.mocker.fromsignalbot[1][1:],
-                              ['Plugin pingpong enabled. ✔', [], ['+123']])
-        self.assertCountEqual(self.mocker.fromsignalbot[2][1:],
-                              ['pong', [], ['+123']])
-        self.assertCountEqual(self.mocker.fromsignalbot[3][1:],
-                              ['Plugin pingpong disabled. ✔', [], ['+123']])
+        self.mocker.wait_for_n_messages(n=5)
+        expect_messages = [
+            ['You are not my master. ❌', [], ['+000']],
+            ['Plugin pingpong enabled. ✔', [], ['+123']],
+            ['pong', [], ['+123']],
+            ['Plugin pingpong disabled. ✔', [], ['+123']]]
+        self._assert_expected_messages(expect_messages)
 
     def test_locking_basic(self):
         self.mocker.messageSignalbot('+123', None, '//enable pingponglocktest',
                                      [])
         self.mocker.messageSignalbot('+123', None, 'ping', [])
         self.mocker.messageSignalbot('+123', None, 'backup', [])
-        time.sleep(.1)
+        self.mocker.wait_for_n_messages(n=5)
         self.mocker.messageSignalbot('+123', None, 'ping', [])
-        time.sleep(5)
+        self.mocker.wait_for_n_messages(n=3, timeout=10)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
             ['start pong', [], ['+123']],
@@ -66,9 +71,7 @@ class HelloWorldTest(unittest.TestCase):
             ['... done sleeping / locking', [], ['+123']],
             ['start pong', [], ['+123']],
             ['pong', [], ['+123']]]
-        self.assertEqual(len(expect_messages), len(self.mocker.fromsignalbot))
-        for want, have in zip(expect_messages, self.mocker.fromsignalbot):
-            self.assertCountEqual(want, have[1:])
+        self._assert_expected_messages(expect_messages)
 
     def test_locking_threeblocking(self):
         self.mocker.messageSignalbot('+123', None, '//enable pingponglocktest',
@@ -76,7 +79,7 @@ class HelloWorldTest(unittest.TestCase):
         self.mocker.messageSignalbot('+123', None, 'backup_A', [])
         self.mocker.messageSignalbot('+123', None, 'backup_B', [])
         self.mocker.messageSignalbot('+123', None, 'backup_C', [])
-        time.sleep(5)
+        self.mocker.wait_for_n_messages(n=8, timeout=10)
         expect_messages = [
             ['Plugin pingponglocktest enabled. ✔', [], ['+123']],
             ['backup_A: Attempting to acquire exclusive lock...',
@@ -91,6 +94,4 @@ class HelloWorldTest(unittest.TestCase):
             ['We want to do our own handling if we cannot get the exclusive '
              'lock. ❌', [], ['+123']],
         ]
-        self.assertCountEqual(expect_messages,
-                              [have[1:]
-                               for have in self.mocker.fromsignalbot])
+        self._assert_expected_messages(expect_messages)

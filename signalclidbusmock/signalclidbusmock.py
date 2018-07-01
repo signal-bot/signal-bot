@@ -1,5 +1,6 @@
 from pydbus.generic import signal
 import time
+from threading import Condition
 
 
 class SignalCLIDBusMock(object):
@@ -32,19 +33,33 @@ class SignalCLIDBusMock(object):
     """
 
     def __init__(self):
+        self._cv = Condition()
         self._sentmessages = []
         self._groups = {(0, 1, 2): 'test group'}
+
+    def wait_until_n_messages(self, n=1, timeout=1):
+        with self._cv:
+            time_start = time.time()
+            while len(self._sentmessages) < n:
+                self._cv.wait(timeout=timeout)
+                if timeout is not None and time.time() - time_start > timeout:
+                    return False
+        return True
 
     def sendMessage(self, message, attachmentfiles, recipients):
         if len(recipients) > 1 and all([len(k) == 1 for k in recipients]):
             raise TypeError('conform with signal-cli 0.6.0 and wrap single '
                             'recipient into list like so [\'+123\']')
-        self._sentmessages.append([time.time(),
-                                   message, attachmentfiles, recipients])
+        with self._cv:
+            self._sentmessages.append([time.time(),
+                                       message, attachmentfiles, recipients])
+            self._cv.notify_all()
 
     def sendGroupMessage(self, message, attachmentfiles, group_id):
-        self._sentmessages.append([time.time(),
-                                   message, attachmentfiles, group_id])
+        with self._cv:
+            self._sentmessages.append([time.time(),
+                                       message, attachmentfiles, group_id])
+            self._cv.notify_all()
 
     def getGroupName(self, group_id):
         return self._groups.get(tuple(group_id), '')
