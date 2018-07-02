@@ -7,7 +7,7 @@ class ChatThreadcounter(object):
 
     def __init__(self, chat_lock):
         self._chat_lock = chat_lock
-        self._entry_lock = self._chat_lock.entry_lock
+        self.entry_lock = Lock()
         self._count = 0
 
         # Condition to protect _count
@@ -22,7 +22,7 @@ class ChatThreadcounter(object):
         #   self._count += 1
         # which would mean the new blocking thread would start despite our
         # new thread running!
-        with self._entry_lock:
+        with self.entry_lock:
 
             # Check if there is a blocking thread running and wait for it to
             # finish if needed.
@@ -61,34 +61,64 @@ class ChatLock(object):
 
     def __init__(self):
         self._lock = Lock()
-        self.entry_lock = Lock()
+        self._entry_lock = Lock()
         self.threadcounter = ChatThreadcounter(self)
 
-    def __enter__(self):
-        # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
-        # prevent race conditions
-        with self.entry_lock:
-
-            # Ensure no messages start processing for the same chat. Also
-            # ensure there is only one blocking thread running at all times
-            unblocked = self._lock.acquire(False)
-
-        # Ensure all other threads have finished processing.
-        # Needs to be done outside self.entry_lock. Otherwise there can be a
-        # deadlock if one thread is at
-        #    wait_until_only_one()
-        # and another thread is at
-        #    with self.entry_lock
-        if unblocked:
-            self.threadcounter.wait_until_only_one()
-
+    def _fail_exception(self):
         # For now, we force the plugin to properly deal with denied exclusive
         # threads (as well as allow plugins to clean up and send an error
         # message to the chat) by throwing an exception; there ought to be a
         # nicer way that does not require plugin developers to do the
         # try-with-except...probably to be implemented in the Plugin class
-        else:
-            raise ExclusivityException('Exclusive lock could not be acquired.')
+        raise ExclusivityException('Exclusive lock could not be acquired.')
+
+    def __enter__(self):
+
+        # Ensure no threads can accumulate waiting to try and get the chat
+        # lock. This is possible since we don't allow waiting for the chat
+        # lock, so we can just immedialy fail here.
+        #
+        # This is important since otherwise the following deadlock is possible:
+        # Thread 1:
+        # - holds self._lock
+        # - does self.threadcounter.wait_until_only_one()
+        # Thread 2:
+        # - has entered the threadcounter
+        # - waits below at "with self.threadcounter.entry_lock"
+        # Thread 3:
+        # - is in self.threadcounter.__enter__
+        # - holds self.threadcounter.entry_lock
+        # - does wait_until_unblocked()
+        #
+        # Note that this Deadlock can also be prevented by moving the
+        #   self.threadcounter.wait_until_only_one()
+        # below into the
+        #   with self.threadcounter.entry_lock:
+        # However, then there could be the following deadlock:
+        # Thread 1:
+        # - is at self.threadcounter.entry_lock below
+        # Thread 2:
+        # - is in Threadcounter.__enter__ at wait_until_unblocked()
+        if not self._entry_lock.acquire(False):
+            self._fail_exception()
+
+        try:
+
+            # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
+            # prevent race conditions.
+            with self.threadcounter.entry_lock:
+
+                # Ensure no messages start processing for the same chat. Also
+                # ensure there is only one blocking thread running at all times
+                if not self._lock.acquire(False):
+                    self._fail_exception()
+
+            # Ensure all other threads have finished processing.
+            self.threadcounter.wait_until_only_one()
+
+        finally:
+            # Release entry lock
+            self._entry_lock.release()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._lock.release()
