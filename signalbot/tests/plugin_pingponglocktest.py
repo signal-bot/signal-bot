@@ -7,10 +7,12 @@ class PingPongLockTestChat(PluginChat):
     def triagemessage(self, message):
 
         if message.text in ['backup_A', 'backup_B', 'backup_C']:
-            if message.text == 'backup_B':
+            if message.text == 'backup_A':
                 sleep(.3)
-            elif message.text == 'backup_C':
+            elif message.text == 'backup_B':
                 sleep(.6)
+            elif message.text == 'backup_C':
+                sleep(.9)
             self.reply("{}: Attempting to acquire exclusive lock...".format(
                 message.text))
             if message.text in ['backup_A', 'backup_B']:
