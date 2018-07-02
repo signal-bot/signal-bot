@@ -36,6 +36,7 @@ class PingPongLockTestChat(PluginChat):
             return
 
         elif message.text == 'backup':
+            sleep(.3)
             self.reply("Acquiring lock...")
             with self.isolated_thread:
                 self.reply("Locked - sleeping 1 sec ...")
