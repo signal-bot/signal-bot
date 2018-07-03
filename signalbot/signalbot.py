@@ -1,16 +1,16 @@
+from .plugins.plugin import PluginRouter
 from gi.repository import GLib
 from importlib import import_module
+from os import chdir
 from pathlib import Path
 from pydbus import connect, SessionBus, SystemBus
-import yaml
-from threading import Thread
 import signal
+from stat import S_IEXEC, S_IREAD
 from sys import exit
 from tempfile import TemporaryDirectory
-from stat import S_IEXEC, S_IREAD
-from os import chdir
-from .plugins.plugin import PluginRouter
 from textwrap import dedent
+from threading import Thread
+import yaml
 
 
 class Chat(object):

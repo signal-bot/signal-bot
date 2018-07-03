@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from threading import Condition, Lock, Thread
 from pathlib import Path
+from threading import Condition, Lock, Thread
 
 
 class ChatThreadcounter(object):
