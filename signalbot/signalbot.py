@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from stat import S_IEXEC, S_IREAD
 from os import chdir
 from .plugins.plugin import PluginRouter
+from textwrap import dedent
 
 
 class Chat(object):
@@ -43,7 +44,7 @@ class Chat(object):
             del self._plugin_routers[plugin]
 
     def triagemessage(self, message):
-        for _, plugin_router in self._plugin_routers.items():
+        for plugin_router in self._plugin_routers.values():
             plugin_router.triagemessage(message)
 
     def reply(self, text, attachments=[]):
@@ -78,18 +79,17 @@ class Signalbot(object):
         else:
             self._data_dir = data_dir
 
-        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
-        self._config = yaml.load(self._configfile.open('r'))
-
-        defaults = {
+        # defaults
+        self._config = {
             'bus': None,
             'enabled': {},
             'master': None,
             'plugins': [],
             'testing_plugins': [],
         }
-        for key, default in defaults.items():
-            self._config[key] = self._config.get(key, default)
+
+        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
+        self._config.update(yaml.load(self._configfile.open('r')))
 
     def _save_config(self):
         yaml.dump(self._config, self._configfile.open('w'))
@@ -121,8 +121,8 @@ class Signalbot(object):
         # Enable in configured chats
         for chat_id in self._config['enabled']:
             if plugin in self._config['enabled'][chat_id]:
-                chat = self._get_chat_by_id(chat_id)
-                chat.enable_plugin(plugin, plugin_router)
+                self._get_chat_by_id(chat_id).enable_plugin(
+                    plugin, plugin_router)
 
     def __enter__(self):
 
@@ -201,7 +201,7 @@ class Signalbot(object):
     def _triagemessage(self,
                        timestamp, sender, group_id, text, attachmentfiles):
 
-        # Don't accumulate Chat instances for chats with no active plugins
+        # Do not accumulate Chat instances for chats with no active plugins
         chat_id = Chat.get_id_from_sender_and_group_id(sender, group_id)
         if chat_id in self._chats:
             chat = self._chats[chat_id]
@@ -218,20 +218,20 @@ class Signalbot(object):
         # Other messages are handled by plugins and in separate threads
         chat.triagemessage(message)
 
-        # Check whether we're still in fakecwd
+        # Check whether we are still in fakecwd
         if Path.cwd() != Path(self._fakecwd.name):
             raise Exception("Do not change the working directory. Use absolute"
                             "paths instead.")
 
     def _master_print_help(self, message):
-        message.chat.reply("""
+        message.chat.reply(dedent("""\
             Available commands:
             //help
             //enable plugin [plugin ...]
             //disable plugin  [plugin ...]
             //list-enabled
             //list-available
-            """)
+            """))
 
     def _master_enable(self, message, params):
         for plugin in params:
@@ -253,7 +253,7 @@ class Signalbot(object):
             self._config['enabled'][chat_id].append(plugin)
             self._save_config()
             # Use self._get_chat_by_id() to automatically store the chat in
-            # self._chats if it hasn't been so far
+            # self._chats if it has not been so far
             chat = self._get_chat_by_id(chat_id)
             chat.enable_plugin(plugin, self._plugin_routers[plugin])
             message.chat.success("Plugin {} enabled.".format(plugin))

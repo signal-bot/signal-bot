@@ -14,7 +14,7 @@ class ChatThreadcounter(object):
         self._condition = Condition()
 
     def __enter__(self):
-        # Don't allow starting new blocked threads during entry to the
+        # Do not allow starting new blocked threads during entry to the
         # ChatThreadcount lock. This is to prevent a new blocking thread
         # to enter the ChatLock between the
         #   self._chat_lock.wait_until_unblocked()
@@ -176,7 +176,7 @@ class PluginRouter(object):
 
         self._chat_class = chat_class
         if not issubclass(self._chat_class, PluginChat):
-            raise Exception("chat_class() must be a a subclass of PluginChat")
+            raise Exception("chat_class must be a a subclass of PluginChat")
 
         self._chats = {}
 
@@ -198,5 +198,4 @@ class PluginRouter(object):
 
     def triagemessage(self, message):
         chat_id = message.chat.id
-        if chat_id in self._chats:
-            self._chats[chat_id].start_processing(message)
+        self._chats[chat_id].start_processing(message)
