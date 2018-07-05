@@ -171,10 +171,12 @@ class Signalbot(object):
             self._thread.start()
 
             if self._config['startup_notification']:
-                master_chat_id = Chat.get_id_from_sender_and_group_id(
-                    self._config['master'])
-                master_chat = self._get_chat_by_id(master_chat_id)
-                self.send_success('Always at your service!', [], master_chat)
+                for master in self._config['master']:
+                    master_chat_id = Chats.get_id_from_sender_and_group_id(
+                        master)
+                    master_chat = self._chats.get(master_chat_id, store=True)
+                    self.send_success('Always at your service!', [],
+                                      master_chat)
 
         except Exception as e:
             # Try not to leave empty temporary directories behind when e.g. a
