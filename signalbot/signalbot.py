@@ -89,10 +89,12 @@ class Signalbot(object):
         }
 
         self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
-        self._config.update(yaml.load(self._configfile.open('r')))
+        with self._configfile.open('r') as yamlfile:
+            self._config.update(yaml.load(yamlfile))
 
     def _save_config(self):
-        yaml.dump(self._config, self._configfile.open('w'))
+        with self._configfile.open('w') as yamlfile:
+            yaml.dump(self._config, yamlfile)
 
     def _get_chat_by_id(self, chat_id):
         if chat_id not in self._chats:
