@@ -212,7 +212,9 @@ class Signalbot(object):
 
         # Do not accumulate Chat instances for chats with no active plugins
         chat_id = Chats.get_id_from_sender_and_group_id(sender, group_id)
-        chat = self._chats.get(chat_id, Chat(self, chat_id))
+        # Use short-circuit "or" to avoid instantiation of an obsolete Chat
+        # class object; this works since a Chat class object always is truthy
+        chat = self._chats.get(chat_id) or Chat(self, chat_id)
 
         message = Message(timestamp, chat, sender, text, attachmentfiles)
 
