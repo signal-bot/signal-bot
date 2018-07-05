@@ -13,7 +13,7 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir = TemporaryDirectory()
 
         config = {
-            'master': '+123',
+            'master': ['+123'],
             'plugins': ['pingpong'],
             'testing_plugins': ['pingponglocktest'],
         }

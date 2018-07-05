@@ -297,7 +297,7 @@ class Signalbot(object):
         message.chat.reply(reply)
 
     def _master_message(self, message):
-        if message.sender != self._config['master']:
+        if message.sender not in self._config['master']:
             message.chat.error("You are not my master.")
             return
 
