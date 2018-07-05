@@ -1,4 +1,4 @@
-from .plugin import PluginChat
+from ..plugin import PluginChat
 
 
 class PingPongChat(PluginChat):
