@@ -1,4 +1,4 @@
-from ..plugin import PluginChat
+from signalbot.plugins import PluginChat
 
 
 class PingPongChat(PluginChat):

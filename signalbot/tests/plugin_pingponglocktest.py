@@ -1,4 +1,4 @@
-from signalbot.plugins.plugin import PluginChat, ExclusivityException
+from signalbot.plugins import PluginChat, ExclusivityException
 from time import sleep
 
 

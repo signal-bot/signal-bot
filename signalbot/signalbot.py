@@ -1,4 +1,4 @@
-from .plugins.plugin import PluginRouter
+from .plugins import PluginRouter
 from gi.repository import GLib
 from importlib import import_module
 from os import chdir
