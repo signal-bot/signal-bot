@@ -19,8 +19,8 @@ class Chats(dict):
         self._bot = kwargs['bot']
         super().__init__(self, *args, **kwargs)
 
-    def get(self, key, default=None, create=False):
-        if create and key not in self:
+    def get(self, key, default=None, store=False):
+        if store and key not in self:
             self[key] = Chat(self._bot, id=key)
         return super().get(key, default)
 
@@ -130,7 +130,7 @@ class Signalbot(object):
         # Enable in configured chats
         for chat_id in self._config['enabled']:
             if plugin in self._config['enabled'][chat_id]:
-                self._chats.get(chat_id, create=True).enable_plugin(
+                self._chats.get(chat_id, store=True).enable_plugin(
                     plugin, plugin_router)
 
     def __enter__(self):
@@ -258,9 +258,9 @@ class Signalbot(object):
 
             self._config['enabled'][chat_id].append(plugin)
             self._save_config()
-            # Use self._get_chat_by_id() to automatically store the chat in
+            # Use store=True to automatically store the chat in
             # self._chats if it has not been so far
-            chat = self._chats.get(chat_id, create=True)
+            chat = self._chats.get(chat_id, store=True)
             chat.enable_plugin(plugin, self._plugin_routers[plugin])
             message.chat.success("Plugin {} enabled.".format(plugin))
 
