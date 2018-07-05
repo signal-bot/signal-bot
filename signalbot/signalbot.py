@@ -13,14 +13,16 @@ from threading import Thread
 import yaml
 
 
-class Chat(object):
+class Chats(dict):
 
-    def __init__(self, bot, id):
-        self._bot = bot
-        self.is_group = isinstance(id, tuple) and id != ()
-        self.id = id
+    def __init__(self, *args, **kwargs):
+        self._bot = kwargs['bot']
+        super().__init__(self, *args, **kwargs)
 
-        self._plugin_routers = {}
+    def get(self, key, default=None, create=False):
+        if create and key not in self:
+            self[key] = Chat(self._bot, id=key)
+        return super().get(key, default)
 
     @staticmethod
     def get_id_from_sender_and_group_id(sender, group_id):
@@ -29,6 +31,16 @@ class Chat(object):
             return tuple(group_id)
         else:
             return sender
+
+
+class Chat(object):
+
+    def __init__(self, bot, id):
+        self._bot = bot
+        self.is_group = isinstance(id, tuple) and id != ()
+        self.id = id
+
+        self._plugin_routers = {}
 
     def __str__(self):
         return str(self.id)
@@ -96,11 +108,6 @@ class Signalbot(object):
         with self._configfile.open('w') as yamlfile:
             yaml.dump(self._config, yamlfile)
 
-    def _get_chat_by_id(self, chat_id):
-        if chat_id not in self._chats:
-            self._chats[chat_id] = Chat(self, id=chat_id)
-        return self._chats[chat_id]
-
     def _init_plugin(self, plugin, test=False):
         # Load module
         if test:
@@ -123,7 +130,7 @@ class Signalbot(object):
         # Enable in configured chats
         for chat_id in self._config['enabled']:
             if plugin in self._config['enabled'][chat_id]:
-                self._get_chat_by_id(chat_id).enable_plugin(
+                self._chats.get(chat_id, create=True).enable_plugin(
                     plugin, plugin_router)
 
     def __enter__(self):
@@ -152,7 +159,7 @@ class Signalbot(object):
 
         try:
             self._plugin_routers = {}
-            self._chats = {}
+            self._chats = Chats(bot=self)
             for plugin in self._config['plugins']:
                 self._init_plugin(plugin)
             for plugin in self._config['testing_plugins']:
@@ -176,7 +183,7 @@ class Signalbot(object):
         self._signal.onMessageReceived = None
 
         self._plugin_routers = {}
-        self._chats = {}
+        self._chats = None
 
         Path(self._fakecwd.name).chmod(S_IREAD)
         self._fakecwd.cleanup()
@@ -204,11 +211,8 @@ class Signalbot(object):
                        timestamp, sender, group_id, text, attachmentfiles):
 
         # Do not accumulate Chat instances for chats with no active plugins
-        chat_id = Chat.get_id_from_sender_and_group_id(sender, group_id)
-        if chat_id in self._chats:
-            chat = self._chats[chat_id]
-        else:
-            chat = Chat(self, chat_id)
+        chat_id = Chats.get_id_from_sender_and_group_id(sender, group_id)
+        chat = self._chats.get(chat_id, Chat(self, chat_id))
 
         message = Message(timestamp, chat, sender, text, attachmentfiles)
 
@@ -256,7 +260,7 @@ class Signalbot(object):
             self._save_config()
             # Use self._get_chat_by_id() to automatically store the chat in
             # self._chats if it has not been so far
-            chat = self._get_chat_by_id(chat_id)
+            chat = self._chats.get(chat_id, create=True)
             chat.enable_plugin(plugin, self._plugin_routers[plugin])
             message.chat.success("Plugin {} enabled.".format(plugin))
 
