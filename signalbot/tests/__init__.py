@@ -85,7 +85,7 @@ class HelloWorldTest(unittest.TestCase):
              [], ['+123']],
             ['backup_B: Attempting to acquire exclusive lock...',
              [], ['+123']],
-            ['Exclusive lock could not be acquired. ❌', [], ['+123']],
+            ['Isolation lock could not be acquired. ❌', [], ['+123']],
             ['backup_C: Attempting to acquire exclusive lock...',
              [], ['+123']],
             ['We want to do our own handling if we cannot get the exclusive '

@@ -5,8 +5,8 @@ from threading import Condition, Lock, Thread
 
 class ChatThreadcounter(object):
 
-    def __init__(self, chat_lock):
-        self._chat_lock = chat_lock
+    def __init__(self, isolated_lock):
+        self._isolated_lock = isolated_lock
         self.entry_lock = Lock()
         self._count = 0
 
@@ -14,22 +14,22 @@ class ChatThreadcounter(object):
         self._condition = Condition()
 
     def __enter__(self):
-        # Do not allow starting new blocked threads during entry to the
-        # ChatThreadcount lock. This is to prevent a new blocking thread
-        # to enter the ChatLock between the
+        # Do not allow starting new isolated threads during entry to the
+        # ChatThreadcount lock. This is to prevent a new isolated thread
+        # to obtain the IsolationLock between the
         #   self._chat_lock.wait_until_unblocked()
         # and the
         #   self._count += 1
-        # which would mean the new blocking thread would start despite our
+        # which would mean the new isolated thread would start despite our
         # new thread running!
         with self.entry_lock:
 
-            # Check if there is a blocking thread running and wait for it to
+            # Check if there is an isolated thread running and wait for it to
             # finish if needed.
-            # This needs to be done before increasing the thread count. Else, a
-            # blocking thread might wait forever for all threads to finish in
-            # wait_until_only_one()
-            self._chat_lock.wait_until_unblocked()
+            # This needs to be done before increasing the thread count. Else,
+            # an isolated thread might wait forever for all threads to finish
+            # in wait_until_only_one()
+            self._isolated_lock.wait_until_unblocked()
 
             # Increase thread count
             with self._condition:
@@ -44,7 +44,7 @@ class ChatThreadcounter(object):
 
             # Notify for wait_until_only_one()
             # No need for notify_all() since there can only be one
-            # blocking thread anyway.
+            # isolated thread anyway.
             self._condition.notify()
 
     def wait_until_only_one(self):
@@ -53,11 +53,11 @@ class ChatThreadcounter(object):
                 self._condition.wait()
 
 
-class ExclusivityException(Exception):
+class IsolationException(Exception):
     pass
 
 
-class ChatLock(object):
+class IsolationLock(object):
 
     def __init__(self):
         self._lock = Lock()
@@ -65,18 +65,18 @@ class ChatLock(object):
         self.threadcounter = ChatThreadcounter(self)
 
     def _fail_exception(self):
-        # For now, we force the plugin to properly deal with denied exclusive
+        # For now, we force the plugin to properly deal with denied isolated
         # threads (as well as allow plugins to clean up and send an error
         # message to the chat) by throwing an exception; there ought to be a
         # nicer way that does not require plugin developers to do the
         # try-with-except...probably to be implemented in the Plugin class
-        raise ExclusivityException('Exclusive lock could not be acquired.')
+        raise IsolationException('Isolation lock could not be acquired.')
 
     def __enter__(self):
 
-        # Ensure no threads can accumulate waiting to try and get the chat
-        # lock. This is possible since we don't allow waiting for the chat
-        # lock, so we can just immedialy fail here.
+        # Ensure no threads can accumulate waiting to try and get the isolated
+        # lock. This is possible since we do not allow waiting for the isolated
+        # chat lock, so we can just immediately fail here.
         #
         # This is important since otherwise the following deadlock is possible:
         # Thread 1:
@@ -104,12 +104,12 @@ class ChatLock(object):
 
         try:
 
-            # Sometimes starting a ChatLock is disallowed by ChatThreadcount to
-            # prevent race conditions.
+            # Sometimes obtaining an IsolationLock is disallowed by
+            # ChatThreadcount to prevent race conditions.
             with self.threadcounter.entry_lock:
 
                 # Ensure no messages start processing for the same chat. Also
-                # ensure there is only one blocking thread running at all times
+                # ensure there is only one isolated thread running at all times
                 if not self._lock.acquire(False):
                     self._fail_exception()
 
@@ -136,9 +136,9 @@ class PluginChat(ABC):
         self._data_dir = data_dir
 
         self.chat = chat
-        # Init chat lock, needs to be done in the main thread to avoid race
+        # Init locks; needs to be done in the main thread to avoid race
         # conditions
-        self.isolated_thread = ChatLock()
+        self.isolated_thread = IsolationLock()
         self.resource_lock = Lock()
 
     @property
@@ -187,7 +187,7 @@ class PluginChat(ABC):
             # Do actual stuff
             try:
                 target(*args)
-            except ExclusivityException as e:
+            except IsolationException as e:
                 self.error('{}'.format(e))
 
     @abstractmethod

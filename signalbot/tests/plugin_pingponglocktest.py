@@ -1,4 +1,4 @@
-from signalbot.plugins import PluginChat, ExclusivityException
+from signalbot.plugins import PluginChat, IsolationException
 from time import sleep
 
 
@@ -30,7 +30,7 @@ class PingPongLockTestChat(PluginChat):
                         sleep(1)
                         self.reply("{}: ... done sleeping / locking".format(
                             message.text))
-                except ExclusivityException:
+                except IsolationException:
                     self.error('We want to do our own handling if we cannot '
                                'get the exclusive lock.')
             return
