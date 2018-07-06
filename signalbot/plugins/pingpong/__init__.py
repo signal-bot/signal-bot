@@ -1,7 +1,7 @@
-from .plugin import Plugin
+from signalbot.plugins import PluginChat
 
 
-class PingPong(Plugin):
+class PingPongChat(PluginChat):
 
     def triagemessage(self, message):
         if message.text != 'ping':
@@ -10,4 +10,4 @@ class PingPong(Plugin):
         self.reply('pong')
 
 
-__plugin__ = PingPong
+__plugin_chat__ = PingPongChat

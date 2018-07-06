@@ -1,35 +1,82 @@
+from .plugins import PluginRouter
 from gi.repository import GLib
 from importlib import import_module
+from os import chdir
 from pathlib import Path
 from pydbus import connect, SessionBus, SystemBus
+import signal
+from stat import S_IEXEC, S_IREAD
+from sys import exit
+from tempfile import TemporaryDirectory
+from textwrap import dedent
 from threading import Thread
 import yaml
 
 
-class Message(object):
+class Chats(dict):
 
-    def __init__(self, bot,
-                 timestamp, sender, group_id, text, attachmentfiles):
-        self.bot = bot
-        self.timestamp = timestamp
-        self.sender = sender
-        self.group_id = group_id
-        self.text = text
-        self.attachmentfiles = attachmentfiles
-        self.is_group = self.group_id != []
-        if self.is_group:
-            self.chat_id = tuple(self.group_id)
+    def __init__(self, *args, **kwargs):
+        self._bot = kwargs['bot']
+        super().__init__(self, *args, **kwargs)
+
+    def get(self, key, default=None, store=False):
+        if store and key not in self:
+            self[key] = Chat(self._bot, id=key)
+        return super().get(key, default)
+
+    @staticmethod
+    def get_id_from_sender_and_group_id(sender, group_id):
+        if group_id != []:
+            # Ensure we have a hashable id
+            return tuple(group_id)
         else:
-            self.chat_id = self.sender
+            return sender
+
+
+class Chat(object):
+
+    def __init__(self, bot, id):
+        self._bot = bot
+        self.is_group = isinstance(id, tuple) and id != ()
+        self.id = id
+
+        self._plugin_routers = {}
+
+    def __str__(self):
+        return str(self.id)
+
+    def enable_plugin(self, plugin, plugin_router):
+        if plugin not in self._plugin_routers:
+            self._plugin_routers[plugin] = plugin_router
+            self._plugin_routers[plugin].enable(self)
+
+    def disable_plugin(self, plugin):
+        if plugin in self._plugin_routers:
+            self._plugin_routers[plugin].disable(self)
+            del self._plugin_routers[plugin]
+
+    def triagemessage(self, message):
+        for plugin_router in self._plugin_routers.values():
+            plugin_router.triagemessage(message)
 
     def reply(self, text, attachments=[]):
-        self.bot.send_message(text, attachments, self.chat_id)
+        self._bot.send_message(text, attachments, self)
 
     def error(self, text, attachments=[]):
-        self.bot.send_error(text, attachments, self.chat_id)
+        self._bot.send_error(text, attachments, self)
 
     def success(self, text, attachments=[]):
-        self.bot.send_success(text, attachments, self.chat_id)
+        self._bot.send_success(text, attachments, self)
+
+
+class Message(object):
+
+    def __init__(self, timestamp, chat, sender, text, attachmentfiles):
+        self.timestamp = timestamp
+        self.chat = chat
+        self.sender = sender
+        self.text = text
+        self.attachmentfiles = attachmentfiles
 
 
 class Signalbot(object):
@@ -44,29 +91,60 @@ class Signalbot(object):
         else:
             self._data_dir = data_dir
 
-        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
-        self.config = yaml.load(self._configfile.open('r'))
-
-        defaults = {
+        # defaults
+        self._config = {
             'bus': None,
             'enabled': {},
             'master': None,
             'plugins': [],
             'testing_plugins': [],
         }
-        for key, default in defaults.items():
-            self.config[key] = self.config.get(key, default)
+
+        self._configfile = Path.joinpath(self._data_dir, 'config.yaml')
+        with self._configfile.open('r') as yamlfile:
+            self._config.update(yaml.load(yamlfile))
 
     def _save_config(self):
-        yaml.dump(self.config, self._configfile.open('w'))
+        with self._configfile.open('w') as yamlfile:
+            yaml.dump(self._config, yamlfile)
 
-    def start(self):
-        if self.config['bus'] == 'session' or self.config['bus'] is None:
+    def _init_plugin(self, plugin, test=False):
+        # Load module
+        if test:
+            module_name = '.tests.plugin_{}'.format(plugin)
+        else:
+            module_name = '.plugins.{}'.format(plugin)
+        module = import_module(module_name, package='signalbot')
+
+        # Initialize plugin router
+        if hasattr(module, '__plugin_router__'):
+            plugin_router_class = module.__plugin_router__
+        else:
+            plugin_router_class = PluginRouter
+        data_dir = Path.joinpath(self._data_dir, 'plugin-'+plugin)
+        plugin_router = plugin_router_class(
+            data_dir=data_dir,
+            chat_class=module.__plugin_chat__)
+        self._plugin_routers[plugin] = plugin_router
+
+        # Enable in configured chats
+        for chat_id in self._config['enabled']:
+            if plugin in self._config['enabled'][chat_id]:
+                self._chats.get(chat_id, store=True).enable_plugin(
+                    plugin, plugin_router)
+
+    def __enter__(self):
+
+        # SIGTERMs should also lead to __exit__() being called. Note that
+        # SIGINTs/KeyboardInterrupts are already handled by GLib.MainLoop
+        signal.signal(signal.SIGTERM, self._sigterm_handler)
+
+        if self._config['bus'] == 'session' or self._config['bus'] is None:
             self._bus = SessionBus()
         elif self.args.bus == 'system':
             self._bus = SystemBus()
         else:
-            self._bus = connect(self.config['bus'])
+            self._bus = connect(self._config['bus'])
 
         if self._mocker:
             self._signal = self._bus.get('org.signalbot.signalclidbusmock')
@@ -74,121 +152,155 @@ class Signalbot(object):
             self._signal = self._bus.get('org.asamk.Signal')
         self._signal.onMessageReceived = self._triagemessage
 
-        self._plugins = {
-            plugin: import_module('.plugins.{}'.format(plugin),
-                                  package='signalbot').__plugin__
-            for plugin in self.config['plugins']}
-        self._plugins.update({
-            plugin: import_module('.tests.plugin_{}'.format(plugin),
-                                  package='signalbot').__plugin__
-            for plugin in self.config['testing_plugins']})
-        self._plugins_per_chat = {}
+        # Actively discourage chdir in plugins, see _triagemessage
+        self._fakecwd = TemporaryDirectory()
+        Path(self._fakecwd.name).chmod(S_IEXEC)
+        chdir(self._fakecwd.name)
 
-        self._loop = GLib.MainLoop()
-        self._thread = Thread(daemon=True, target=self._loop.run)
-        self._thread.start()
+        try:
+            self._plugin_routers = {}
+            self._chats = Chats(bot=self)
+            for plugin in self._config['plugins']:
+                self._init_plugin(plugin)
+            for plugin in self._config['testing_plugins']:
+                self._init_plugin(plugin, test=True)
 
-    def start_and_join(self):
-        self.start()
+            self._loop = GLib.MainLoop()
+            self._thread = Thread(daemon=True, target=self._loop.run)
+            self._thread.start()
+        except Exception as e:
+            # Try not to leave empty temporary directories behind when e.g. a
+            # plugin fails to load
+            Path(self._fakecwd.name).chmod(S_IREAD)
+            self._fakecwd.cleanup()
+            raise e
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._loop.quit()
+        self._thread.join()
+        self._signal.onMessageReceived = None
+
+        self._plugin_routers = {}
+        self._chats = None
+
+        Path(self._fakecwd.name).chmod(S_IREAD)
+        self._fakecwd.cleanup()
+
+    def _sigterm_handler(self, signum, frame):
+        # Raises SystemExit exception which then calls __exit__
+        exit(0)
+
+    def wait(self):
         self._thread.join()
 
-    def send_message(self, text, attachments, chat_id):
-        if isinstance(chat_id, tuple):
-            self. _signal.sendGroupMessage(text, attachments, list(chat_id))
+    def send_message(self, text, attachments, chat):
+        if chat.is_group:
+            self._signal.sendGroupMessage(text, attachments, list(chat.id))
         else:
-            self._signal.sendMessage(text, attachments, [chat_id])
+            self._signal.sendMessage(text, attachments, [chat.id])
 
-    def send_error(self, text, attachments, chat_id):
-        self.send_message(text + ' ❌', attachments, chat_id)
+    def send_error(self, text, attachments, chat):
+        self.send_message(text + ' ❌', attachments, chat)
 
-    def send_success(self, text, attachments, chat_id):
-        self.send_message(text + ' ✔', attachments, chat_id)
+    def send_success(self, text, attachments, chat):
+        self.send_message(text + ' ✔', attachments, chat)
 
     def _triagemessage(self,
                        timestamp, sender, group_id, text, attachmentfiles):
-        message = Message(self,
-                          timestamp, sender, group_id, text, attachmentfiles)
+
+        # Do not accumulate Chat instances for chats with no active plugins
+        chat_id = Chats.get_id_from_sender_and_group_id(sender, group_id)
+        # Use short-circuit "or" to avoid instantiation of an obsolete Chat
+        # class object; this works since a Chat class object always is truthy
+        chat = self._chats.get(chat_id) or Chat(self, chat_id)
+
+        message = Message(timestamp, chat, sender, text, attachmentfiles)
 
         # Master messages are handled internally and in main thread
         if message.text.startswith('//'):
             self._master_message(message)
             return
 
-        # Other messages are handled by plugins and in separate thread
-        chat_id = message.chat_id
-        if chat_id not in self.config['enabled']:
-            return
-        for plugin in self.config['enabled'][chat_id]:
-            if plugin not in self._plugins:
-                continue
-            pluginid = '{}.{}'.format(plugin, chat_id)
-            if pluginid not in self._plugins_per_chat:
-                self._plugins_per_chat[pluginid] = self._plugins[plugin](
-                    self, chat_id)
-            self._plugins_per_chat[pluginid].start_processing(message)
+        # Other messages are handled by plugins and in separate threads
+        chat.triagemessage(message)
+
+        # Check whether we are still in fakecwd
+        if Path.cwd() != Path(self._fakecwd.name):
+            raise Exception("Do not change the working directory. Use absolute"
+                            "paths instead.")
 
     def _master_print_help(self, message):
-        message.reply("""
+        message.chat.reply(dedent("""\
             Available commands:
             //help
             //enable plugin [plugin ...]
             //disable plugin  [plugin ...]
             //list-enabled
             //list-available
-            """)
+            """))
 
     def _master_enable(self, message, params):
         for plugin in params:
 
-            if plugin not in self.config['plugins'] + \
-                    self.config['testing_plugins']:
-                message.error("Plugin {} not loaded".format(plugin))
+            if plugin not in self._config['plugins'] + \
+                    self._config['testing_plugins']:
+                message.chat.error("Plugin {} not loaded".format(plugin))
                 continue
 
-            chat_id = message.chat_id
-            if chat_id not in self.config['enabled']:
-                self.config['enabled'][chat_id] = []
+            chat_id = message.chat.id
+            if chat_id not in self._config['enabled']:
+                self._config['enabled'][chat_id] = []
 
-            if plugin in self.config['enabled'][chat_id]:
-                message.reply("Plugin {} is already enabled.".format(plugin))
+            if plugin in self._config['enabled'][chat_id]:
+                message.chat.reply(
+                    "Plugin {} is already enabled.".format(plugin))
                 continue
 
-            self.config['enabled'][chat_id].append(plugin)
+            self._config['enabled'][chat_id].append(plugin)
             self._save_config()
-            message.success("Plugin {} enabled.".format(plugin))
+            # Use store=True to automatically store the chat in
+            # self._chats if it has not been so far
+            chat = self._chats.get(chat_id, store=True)
+            chat.enable_plugin(plugin, self._plugin_routers[plugin])
+            message.chat.success("Plugin {} enabled.".format(plugin))
 
     def _master_disable(self, message, params):
         for plugin in params:
-            chat_id = message.chat_id
+            chat_id = message.chat.id
 
-            if chat_id not in self.config['enabled'] or \
-                    plugin not in self.config['enabled'][chat_id]:
-                message.reply("Plugin {} is already disabled.".format(plugin))
+            if chat_id not in self._config['enabled'] or \
+                    plugin not in self._config['enabled'][chat_id]:
+                message.chat.reply(
+                    "Plugin {} is already disabled.".format(plugin))
                 continue
 
-            self.config['enabled'][chat_id].remove(plugin)
-            if not len(self.config['enabled'][chat_id]):
-                del self.config['enabled'][chat_id]
+            message.chat.disable_plugin(plugin)
+            self._config['enabled'][chat_id].remove(plugin)
+            if not len(self._config['enabled'][chat_id]):
+                del self._config['enabled'][chat_id]
+                del self._chats[chat_id]
             self._save_config()
-            message.success("Plugin {} disabled.".format(plugin))
+            message.chat.success("Plugin {} disabled.".format(plugin))
 
     def _master_list_enabled(self, message):
         reply = "Enabled plugins:\n"
-        chat_id = message.chat_id
-        if chat_id in self.config['enabled']:
-            for plugin in self.config['enabled'][chat_id]:
+        chat_id = message.chat.id
+        if chat_id in self._config['enabled']:
+            for plugin in self._config['enabled'][chat_id]:
                 reply += "{}\n".format(plugin)
-        message.reply(reply)
+        message.chat.reply(reply)
 
     def _master_list_available(self, message):
         reply = "Available plugins:\n"
-        for plugin in self._plugins:
+        for plugin in self._plugin_routers:
             reply += "{}\n".format(plugin)
-        message.reply(reply)
+        message.chat.reply(reply)
 
     def _master_message(self, message):
-        if message.sender != self.config['master']:
-            message.error("You are not my master.")
+        if message.sender not in self._config['master']:
+            message.chat.error("You are not my master.")
             return
 
         params = message.text[2:].split(' ')
@@ -205,9 +317,4 @@ class Signalbot(object):
         elif command == "list-available":
             self._master_list_available(message)
         else:
-            message.error("Invalid command.")
-
-    def stop(self):
-        self._loop.quit()
-        self._thread.join()
-        self._signal.onMessageReceived = None
+            message.chat.error("Invalid command.")

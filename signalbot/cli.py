@@ -9,8 +9,8 @@ def main():
 
     args = parser.parse_args()
 
-    bot = Signalbot(data_dir=args.data_dir, mocker=args.mocker)
-    bot.start_and_join()
+    with Signalbot(data_dir=args.data_dir, mocker=args.mocker) as bot:
+        bot.wait()
 
 
 if __name__ == '__main__':

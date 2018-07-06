@@ -13,7 +13,7 @@ class HelloWorldTest(unittest.TestCase):
         self.tempdir = TemporaryDirectory()
 
         config = {
-            'master': '+123',
+            'master': ['+123'],
             'plugins': ['pingpong'],
             'testing_plugins': ['pingponglocktest'],
         }
@@ -28,7 +28,7 @@ class HelloWorldTest(unittest.TestCase):
         time.sleep(.5)
 
     def tearDown(self):
-        self.bot_popen.kill()
+        self.bot_popen.terminate()
         self.mocker.stop()
         self.tempdir.cleanup()
 
