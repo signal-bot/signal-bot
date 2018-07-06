@@ -6,23 +6,45 @@ https://signal-bot.github.io
 
 This project is in its infancy!
 
+**Contents**
+
+* [The idea](#the-idea)
+* [Plugins](#plugins)
+* [Developing a new plugin](#developing-a-new-plugin)
+* [Mocker](#mocker)
+
 ## The idea
 
 * signal-bot provides headless chat/bot/monitoring services for the [Signal][signal] messenger.
 * Services are made available via plugins.
 * Writing new plugins to extend functionality is easy and modular since signal-bot smoothly wraps around [signal-cli][signal-cli] in order to provide a convenient Python framework.
 
-## To do
+## Plugins
 
-* finish mocker to support "message protocol" testing, i.e. testing whether certain messages are responded to as expected by signalbot; also allow for easy definition of such test cases/conversations
-* lay out the core signal-bot message triager and the plugin interface
-* setup.py that also deals with python-gi, which is not smoothly installable via pip; for travis one way may be to symlink the dist-packages
-* currently we test python 3.6; if we feel the urge we can test more
+Ideas/plans for plugins include
+* lunch menu plugin
+* photo memories plugin
+* splitbot
+* automatically replying with the pdf of an author's manuscript which the author is entitled to distribute upon request
+* ...
 
-## Mocker (work in progress)
+## Developing a new plugin
+
+### Overview over the plugin structure and locks
+
+### A minimal hello world example
+
+### Contributing your plugin
+
+Please refer to CONTRIBUTING.md.
+
+## Mocker
 
 The idea behind `Mocker` is to enable for testing and debugging of signal-bot and its plugins.
 It offers a dbus service that (partially) mimicks the dbus service of signal-cli (if needed, it should eventually mimick the [signal-cli dbus service interface][signal-dbus] exactly).
+
+Below we show a minimal example that uses the mocker and a toy bot.
+In the future we will provide an example how the mocker can be used during development and for testing.
 
 ```python
 from pydbus import SessionBus
