@@ -198,4 +198,5 @@ class PluginRouter(object):
 
     def triagemessage(self, message):
         chat_id = message.chat.id
-        self._chats[chat_id].start_processing(message)
+        if chat_id in self._chats:
+            self._chats[chat_id].start_processing(message)
