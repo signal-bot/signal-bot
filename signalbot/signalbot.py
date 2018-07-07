@@ -109,33 +109,34 @@ class Signalbot(object):
         with self._configfile.open('w') as yamlfile:
             yaml.dump(self._config, yamlfile)
 
-    def _init_plugin(self, plugin, test=False):
-        # Load module
-        if test:
-            module_name = '.tests.plugin_{}'.format(plugin)
-        else:
-            module_name = '.plugins.{}'.format(plugin)
-        module = import_module(module_name, package='signalbot')
+    def _get_plugin_router(self, plugin, start=False):
+        if plugin not in self._plugin_routers:
+            # Load module
+            if plugin in self._config['plugins']:
+                module_name = '.plugins.{}'.format(plugin)
+            elif plugin in self._config['testing_plugins']:
+                module_name = '.tests.plugin_{}'.format(plugin)
+            else:
+                raise Exception("Plugin {} not allowed in config."
+                                .format(plugin))
+            module = import_module(module_name, package='signalbot')
 
-        # Initialize plugin router
-        if hasattr(module, '__plugin_router__'):
-            plugin_router_class = module.__plugin_router__
-        else:
-            plugin_router_class = PluginRouter
-        data_dir = Path.joinpath(self._data_dir, 'plugin-'+plugin)
-        plugin_router = plugin_router_class(
-            data_dir=data_dir,
-            chat_class=module.__plugin_chat__)
-        self._plugin_routers[plugin] = plugin_router
+            # Initialize plugin router
+            if hasattr(module, '__plugin_router__'):
+                plugin_router_class = module.__plugin_router__
+            else:
+                plugin_router_class = PluginRouter
+            data_dir = Path.joinpath(self._data_dir, 'plugin-'+plugin)
+            plugin_router = plugin_router_class(
+                data_dir=data_dir,
+                chat_class=module.__plugin_chat__)
+            self._plugin_routers[plugin] = plugin_router
 
-        # Enable in configured chats
-        for chat_id in self._config['enabled']:
-            if plugin in self._config['enabled'][chat_id]:
-                self._chats.get(chat_id, store=True).enable_plugin(
-                    plugin, plugin_router)
+            # Start plugin if requested
+            if start:
+                plugin_router.start()
 
-        # All set up - start plugin
-        plugin_router.start()
+        return self._plugin_routers[plugin]
 
     def __enter__(self):
 
@@ -162,12 +163,18 @@ class Signalbot(object):
         chdir(self._fakecwd.name)
 
         try:
+            # Set up chats and plugins
             self._plugin_routers = {}
             self._chats = Chats(bot=self)
-            for plugin in self._config['plugins']:
-                self._init_plugin(plugin)
-            for plugin in self._config['testing_plugins']:
-                self._init_plugin(plugin, test=True)
+            for chat_id, plugins in self._config['enabled'].items():
+                chat = self._chats.get(chat_id, store=True)
+                for plugin in plugins:
+                    chat.enable_plugin(plugin, self._get_plugin_router(plugin))
+
+            # All set up - start plugins. Needs to be done before starting the
+            # GLib.MainLoop so that plugins are started when messages come in
+            for plugin_router in self._plugin_routers.values():
+                plugin_router.start()
 
             self._loop = GLib.MainLoop()
             self._thread = Thread(daemon=True, target=self._loop.run)
@@ -280,7 +287,11 @@ class Signalbot(object):
             # Use store=True to automatically store the chat in
             # self._chats if it has not been so far
             chat = self._chats.get(chat_id, store=True)
-            chat.enable_plugin(plugin, self._plugin_routers[plugin])
+            # Use start=True to automatically start plugin if it hasn't been
+            # started so far
+            chat.enable_plugin(plugin,
+                               self._get_plugin_router(plugin, start=True))
+
             message.chat.success("Plugin {} enabled.".format(plugin))
 
     def _master_disable(self, message, params):
@@ -299,6 +310,17 @@ class Signalbot(object):
                 del self._config['enabled'][chat_id]
                 del self._chats[chat_id]
             self._save_config()
+
+            # Don't keep around plugins which are no longer needed
+            plugin_in_use = False
+            for plugins in self._config['enabled'].values():
+                if plugin in plugins:
+                    plugin_in_use = True
+                    break
+            if not plugin_in_use:
+                self._get_plugin_router(plugin).stop()
+                del self._plugin_routers[plugin]
+
             message.chat.success("Plugin {} disabled.".format(plugin))
 
     def _master_list_enabled(self, message):
@@ -311,7 +333,9 @@ class Signalbot(object):
 
     def _master_list_available(self, message):
         reply = "Available plugins:\n"
-        for plugin in self._plugin_routers:
+        for plugin in self._config['plugins']:
+            reply += "{}\n".format(plugin)
+        for plugin in self._config['testing_plugins']:
             reply += "{}\n".format(plugin)
         message.chat.reply(reply)
 
