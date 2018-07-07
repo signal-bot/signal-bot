@@ -1,8 +1,9 @@
-from signalbot.plugins import PluginChat
+from signalbot.plugins import PluginChat, chat_entry_point
 
 
 class PingPongChat(PluginChat):
 
+    @chat_entry_point
     def triagemessage(self, message):
         if message.text != 'ping':
             return

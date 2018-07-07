@@ -128,6 +128,18 @@ class IsolationLock(object):
             pass
 
 
+def chat_entry_point(func):
+    """
+    Starts func in the context of a PluginChat instance.
+    This will start a separate thread in which the actual processing is done
+    and return that thread.
+    """
+    def start_func(*args):
+        return args[0]._start(target=func, args=args)
+    start_func.is_entry_point = True
+    return start_func
+
+
 class PluginChat(ABC):
 
     def __init__(self, chat, data_dir):
@@ -140,6 +152,14 @@ class PluginChat(ABC):
         # conditions
         self.isolated_thread = IsolationLock()
         self.resource_lock = Lock()
+
+        # Ensure triagemessage is a chat_entry_point
+        try:
+            self.triagemessage.is_entry_point
+        except AttributeError:
+            raise Exception("PluginChat.triagemessage must be decorated with"
+                            "@chat_entry_point")
+
 
     @property
     def data_dir(self):
@@ -156,15 +176,6 @@ class PluginChat(ABC):
 
     def success(self, text, attachments=[]):
         self.chat.success(text, attachments)
-
-    def start_processing(self, message):
-        """
-        Starts processing of a message.
-        This will start a separate thread in which the actual processing is
-        done and return that thread.
-        """
-        return self._start(args=[message],
-                           target=self.triagemessage)
 
     def _start(self, args, target):
         """
@@ -191,6 +202,7 @@ class PluginChat(ABC):
                 self.error('{}'.format(e))
 
     @abstractmethod
+    @chat_entry_point
     def triagemessage(self, message):
         """
         To be implemented by the respective plugin chat class
@@ -229,4 +241,4 @@ class PluginRouter(object):
     def triagemessage(self, message):
         chat_id = message.chat.id
         if chat_id in self._chats:
-            self._chats[chat_id].start_processing(message)
+            self._chats[chat_id].triagemessage(message)

@@ -1,9 +1,10 @@
-from signalbot.plugins import PluginChat, IsolationException
+from signalbot.plugins import PluginChat, IsolationException, chat_entry_point
 from time import sleep
 
 
 class PingPongLockTestChat(PluginChat):
 
+    @chat_entry_point
     def triagemessage(self, message):
 
         if message.text in ['backup_A', 'backup_B', 'backup_C']:
