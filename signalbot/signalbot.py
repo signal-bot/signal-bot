@@ -134,6 +134,9 @@ class Signalbot(object):
                 self._chats.get(chat_id, store=True).enable_plugin(
                     plugin, plugin_router)
 
+        # All set up - start plugin
+        plugin_router.start()
+
     def __enter__(self):
 
         # SIGTERMs should also lead to __exit__() being called. Note that
@@ -170,6 +173,7 @@ class Signalbot(object):
             self._thread = Thread(daemon=True, target=self._loop.run)
             self._thread.start()
 
+            # Notify master users about completed startup
             if self._config['startup_notification']:
                 for master in self._config['master']:
                     master_chat_id = Chats.get_id_from_sender_and_group_id(
@@ -191,6 +195,9 @@ class Signalbot(object):
         self._loop.quit()
         self._thread.join()
         self._signal.onMessageReceived = None
+
+        for plugin_router in self._plugin_routers.values():
+            plugin_router.stop()
 
         self._plugin_routers = {}
         self._chats = None

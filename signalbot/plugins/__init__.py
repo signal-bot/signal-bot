@@ -160,6 +160,11 @@ class PluginChat(ABC):
             raise Exception("PluginChat.triagemessage must be decorated with"
                             "@chat_entry_point")
 
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
 
     @property
     def data_dir(self):
@@ -221,6 +226,17 @@ class PluginRouter(object):
             raise Exception("chat_class must be a a subclass of PluginChat")
 
         self._chats = {}
+        self._started = False
+
+    def start(self):
+        for chat in self._chats.values():
+            chat.start()
+        self._started = True
+
+    def stop(self):
+        self._started = False
+        for chat in self._chats.values():
+            chat.stop()
 
     @property
     def data_dir(self):
@@ -233,9 +249,12 @@ class PluginRouter(object):
         if chat.id not in self._chats:
             chat_dir = Path.joinpath(self._data_dir, 'chats', str(chat))
             self._chats[chat.id] = self._chat_class(chat, chat_dir)
+            if self._started:
+                self._chats[chat.id].start()
 
     def disable(self, chat):
         if chat.id in self._chats:
+            self._chats[chat.id].stop()
             del self._chats[chat.id]
 
     def triagemessage(self, message):
